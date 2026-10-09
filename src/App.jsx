@@ -41,6 +41,8 @@ const DEFAULT_PRICES = {
   dp_min_percent: 50,
 };
 
+const PAYMENT_NOTE = 'Pelunasan wajib dilakukan paling lambat H-1 (satu hari) sebelum sesi foto dimulai.';
+
 function getCatalog(p) {
   const pr = { ...DEFAULT_PRICES, ...(p || {}) };
   const dpPercent = Number(pr.dp_min_percent) || 50;
@@ -194,7 +196,6 @@ const BANK_ACCOUNTS = [
   { bank: 'Bank Jago', account: '103959772276', name: 'Orien Meidina Raihan' },
   { bank: 'Bank BCA', account: '0292757806', name: 'Orien Meidina Raihan' },
 ];
-const PAYMENT_NOTE = 'Pelunasan wajib dilakukan paling lambat H-1 (satu hari) sebelum sesi foto dimulai.';
 
 const pad2 = (n) => String(n).padStart(2, '0');
 const dateKey = (y, m, d) => `${y}-${pad2(m + 1)}-${pad2(d)}`;
