@@ -1,0 +1,43 @@
+name: Deploy to Production via FTP
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: ⬇️ Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: 📦 Install Dependencies
+        run: npm ci
+
+      - name: ⚙️ Generate .env from GitHub Secrets
+        run: |
+          cat << 'EOF' > .env
+          FTP_HOST=${{ secrets.FTP_HOST }}
+          FTP_PORT=${{ secrets.FTP_PORT }}
+          FTP_USER=${{ secrets.FTP_USER }}
+          FTP_PASS=${{ secrets.FTP_PASS }}
+          DB_HOST=${{ secrets.DB_HOST }}
+          DB_PORT=${{ secrets.DB_PORT }}
+          DB_NAME=${{ secrets.DB_NAME }}
+          DB_USER=${{ secrets.DB_USER }}
+          DB_PASS=${{ secrets.DB_PASS }}
+          APP_URL=${{ secrets.APP_URL }}
+          EOF
+
+      - name: 🚀 Build and Deploy to Server
+        run: npm run deploy
