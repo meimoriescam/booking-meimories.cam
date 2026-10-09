@@ -1,0 +1,38 @@
+# Block access to hidden files (.env, .git, etc.) and database scripts (.sql)
+<FilesMatch "(\.(env|git|sql|ini|log|sh)|composer\.(json|lock))$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+  </IfModule>
+</FilesMatch>
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # Explicit block for dotfiles like .env
+  RewriteRule ^\.(.*)$ - [F,L]
+
+  # Pass Authorization header to PHP
+  RewriteCond %{HTTP:Authorization} .
+  RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+  # Pass existing files and directories directly
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # Allow direct access to /api/ and /uploads/
+  RewriteRule ^(api|uploads)/ - [L]
+
+  # Route everything else to index.html for React SPA
+  RewriteRule ^ index.html [L]
+</IfModule>
+
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+</IfModule>
