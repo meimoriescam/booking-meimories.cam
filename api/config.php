@@ -3,8 +3,22 @@
 error_reporting(E_ALL);
 ini_set('display_errors', '0');
 
-// CORS Headers
-header('Access-Control-Allow-Origin: *');
+// CORS Headers - Whitelist Allowed Origins
+$allowedOrigins = [
+    'https://meimories.cam',
+    'https://www.meimories.cam',
+    'https://booking.meimories.cam',
+    'https://meimoriescam.zedevio.com',
+    'http://localhost:5173',
+    'http://localhost:3000',
+];
+
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+if (in_array($origin, $allowedOrigins, true)) {
+    header("Access-Control-Allow-Origin: {$origin}");
+    header('Access-Control-Allow-Credentials: true');
+}
+
 header('Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
 
@@ -41,7 +55,8 @@ function getDB() {
     static $pdo = null;
     if ($pdo === null) {
         if (!DB_HOST || !DB_NAME || !DB_USER) {
-            jsonResponse(['error' => 'Konfigurasi database belum lengkap di .env server.'], 500);
+            error_log('[DB Config Error] Konfigurasi database belum lengkap di .env.');
+            jsonResponse(['error' => 'Terjadi kesalahan konfigurasi server.'], 500);
         }
         $dsn = "mysql:host=" . DB_HOST . ";port=" . DB_PORT . ";dbname=" . DB_NAME . ";charset=utf8mb4";
         $options = [
@@ -59,6 +74,15 @@ function jsonResponse($data, $statusCode = 200) {
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode($data);
     exit();
+}
+
+function getClientIP() {
+    $ip = $_SERVER['HTTP_CF_CONNECTING_IP'] ?? $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+    if (strpos($ip, ',') !== false) {
+        $parts = explode(',', $ip);
+        $ip = trim($parts[0]);
+    }
+    return filter_var($ip, FILTER_VALIDATE_IP) ? $ip : '0.0.0.0';
 }
 
 function getBearerToken() {
@@ -85,14 +109,19 @@ function requireAuth($pdo) {
         jsonResponse(['error' => 'Akses ditolak: Token tidak ditemukan. Silakan login.'], 401);
     }
 
+    $tokenHash = hash('sha256', $token);
+
     $stmt = $pdo->prepare("
-        SELECT s.token, s.expires_at, u.id as user_id, u.email 
+        SELECT s.token_hash, s.expires_at, u.id as user_id, u.email 
         FROM admin_sessions s
         JOIN admin_users u ON s.user_id = u.id
-        WHERE s.token = :token AND s.expires_at > NOW()
+        WHERE (s.token_hash = :token_hash OR s.token_hash = :raw_token) AND s.expires_at > NOW()
         LIMIT 1
     ");
-    $stmt->execute([':token' => $token]);
+    $stmt->execute([
+        ':token_hash' => $tokenHash,
+        ':raw_token' => $token
+    ]);
     $session = $stmt->fetch();
 
     if (!$session) {

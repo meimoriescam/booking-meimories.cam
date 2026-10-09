@@ -13,9 +13,16 @@ const FTP_USER = process.env.FTP_USER;
 const FTP_PASS = process.env.FTP_PASS;
 const APP_URL = process.env.APP_URL || 'https://meimoriescam.zedevio.com';
 
+const FTP_SECURE_ENV = process.env.FTP_SECURE || 'false';
+const FTP_SECURE = FTP_SECURE_ENV === 'true' ? true : (FTP_SECURE_ENV === 'implicit' ? 'implicit' : false);
+
 if (!FTP_HOST || !FTP_USER || !FTP_PASS) {
   console.error('❌ Error: Kredensial FTP (FTP_HOST, FTP_USER, FTP_PASS) belum diisi di file .env.');
   process.exit(1);
+}
+
+if (!FTP_SECURE) {
+  console.warn('⚠️ [OWASP A02 Warning]: FTP transport berjalan tanpa enkripsi TLS (secure: false). Disarankan mengaktifkan FTP_SECURE=true jika server mendukung FTPS.');
 }
 
 async function deploy() {
@@ -38,13 +45,16 @@ async function deploy() {
   client.ftp.verbose = false;
 
   try {
-    console.log(`\n📡 Step 2: Connecting to FTP ${FTP_HOST}:${FTP_PORT} as ${FTP_USER}...`);
+    console.log(`\n📡 Step 2: Connecting to FTP ${FTP_HOST}:${FTP_PORT} as ${FTP_USER} (secure: ${FTP_SECURE})...`);
     await client.access({
       host: FTP_HOST,
       port: FTP_PORT,
       user: FTP_USER,
       password: FTP_PASS,
-      secure: false,
+      secure: FTP_SECURE,
+      secureOptions: {
+        rejectUnauthorized: false,
+      },
     });
     console.log('✅ Connected to FTP server.');
 
@@ -61,14 +71,19 @@ async function deploy() {
     await client.uploadFromDir(path.resolve('api'));
     await client.cd('/');
 
-    // Ensure uploads directory exists
+    // Ensure uploads directory exists and is secured
     console.log('   - Ensuring uploads/payment-proofs directory exists...');
     await client.ensureDir('uploads/payment-proofs');
     await client.cd('/');
 
-    // Upload .htaccess
+    if (fs.existsSync('uploads/.htaccess')) {
+      console.log('   - Uploading uploads/.htaccess to block script execution in uploads folder...');
+      await client.uploadFrom(path.resolve('uploads/.htaccess'), 'uploads/.htaccess');
+    }
+
+    // Upload root .htaccess
     if (fs.existsSync('.htaccess')) {
-      console.log('   - Uploading .htaccess...');
+      console.log('   - Uploading root .htaccess...');
       await client.uploadFrom(path.resolve('.htaccess'), '.htaccess');
     }
 

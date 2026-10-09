@@ -55,7 +55,9 @@ async function testLive() {
       notes: 'Test booking otomatis'
     })
   });
-  console.log('Create Booking Response:', await bookRes.json());
+  const bookData = await bookRes.json();
+  console.log('Create Booking Response:', bookData);
+  const createdBookingId = bookData.data?.id;
 
   // 4. Test Public Slots
   console.log('\n4. Testing Public Slots Calendar...');
@@ -72,7 +74,7 @@ async function testLive() {
 
   // 6. Test Cancel Booking
   console.log('\n6. Testing Cancel Booking...');
-  const delRes = await fetch(`${BASE_URL}/api/bookings.php?id=${testId}`, {
+  const delRes = await fetch(`${BASE_URL}/api/bookings.php?id=${createdBookingId}`, {
     method: 'DELETE',
     headers: { Authorization: `Bearer ${token}` }
   });

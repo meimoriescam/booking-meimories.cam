@@ -13,10 +13,10 @@ CREATE TABLE IF NOT EXISTS `admin_users` (
 CREATE TABLE IF NOT EXISTS `admin_sessions` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
   `user_id` INT NOT NULL,
-  `token` VARCHAR(128) NOT NULL UNIQUE,
+  `token_hash` VARCHAR(64) NOT NULL UNIQUE,
   `expires_at` DATETIME NOT NULL,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  INDEX (`token`),
+  INDEX (`token_hash`),
   CONSTRAINT `fk_session_user` FOREIGN KEY (`user_id`) REFERENCES `admin_users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -48,9 +48,23 @@ CREATE TABLE IF NOT EXISTS `activity_logs` (
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Admin Akun Default:
--- Email: admin@meimories.cam
--- Password: AdminMeimories123!
-INSERT INTO `admin_users` (`email`, `password_hash`)
-VALUES ('admin@meimories.cam', '$2y$10$ThkyqsSEPBAYPbjiogTamefFMEYVSOwh.VNUF8dMEbZ.UTF9XMAIK')
-ON DUPLICATE KEY UPDATE `email` = VALUES(`email`);
+-- Tabel untuk pembatasan percobaan login (Anti Brute-Force Rate Limiting)
+CREATE TABLE IF NOT EXISTS `login_attempts` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `ip_address` VARCHAR(45) NOT NULL,
+  `attempted_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_ip_attempt` (`ip_address`, `attempted_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabel untuk pembatasan spam booking publik (Anti Spam Rate Limiting)
+CREATE TABLE IF NOT EXISTS `booking_rate_limits` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `ip_address` VARCHAR(45) NOT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_bkg_rate` (`ip_address`, `created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Catatan Keamanan:
+-- Akun admin awal TIDAK disimpan secara hardcoded di file ini.
+-- Jalankan CLI berikut untuk membuat atau mereset akun admin pertama:
+-- php scripts/create-admin.php <email> <password>

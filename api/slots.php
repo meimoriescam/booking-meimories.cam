@@ -12,6 +12,7 @@ try {
     $stmt = $pdo->query("SELECT date, time, package_name FROM bookings ORDER BY date ASC, time ASC");
     $slots = $stmt->fetchAll();
     jsonResponse(['data' => $slots]);
-} catch (Exception $e) {
-    jsonResponse(['error' => 'Gagal mengambil data slot: ' . $e->getMessage()], 500);
+} catch (Throwable $e) {
+    error_log('[Slots Error] ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+    jsonResponse(['error' => 'Terjadi kendala pada server saat memuat jadwal slot.'], 500);
 }
