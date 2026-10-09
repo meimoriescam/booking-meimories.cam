@@ -64,6 +64,13 @@ CREATE TABLE IF NOT EXISTS `booking_rate_limits` (
   INDEX `idx_bkg_rate` (`ip_address`, `created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Tabel untuk pengaturan harga paket & add-on yang dapat diubah admin
+CREATE TABLE IF NOT EXISTS `pricing_settings` (
+  `setting_key` VARCHAR(64) PRIMARY KEY,
+  `setting_value` VARCHAR(255) NOT NULL,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Catatan Keamanan:
 -- Akun admin awal TIDAK disimpan secara hardcoded di file ini.
 -- Jalankan CLI berikut untuk membuat atau mereset akun admin pertama:

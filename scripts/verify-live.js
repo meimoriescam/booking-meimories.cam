@@ -85,6 +85,25 @@ async function testLive() {
   const slotsAfterData = await slotsAfterRes.json();
   console.log('Slots after deletion:', slotsAfterData.data);
 
+  // 8. Test Pricing API (Public & Admin)
+  console.log('\n8. Testing Pricing API...');
+  const pricingGetRes = await fetch(`${BASE_URL}/api/pricing.php`);
+  const pricingGetData = await pricingGetRes.json();
+  console.log('Public Pricing Data received:', Object.keys(pricingGetData.data || {}).length, 'items');
+
+  const pricingUpdateRes = await fetch(`${BASE_URL}/api/pricing.php`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({
+      action: 'update',
+      prices: { mini: 95000, dp_min_percent: 50 }
+    })
+  });
+  console.log('Admin Pricing Update Response:', await pricingUpdateRes.json());
+
   console.log('\n✅ ALL LIVE VERIFICATION CHECKS PASSED PERFECTLY!');
 }
 

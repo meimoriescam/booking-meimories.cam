@@ -225,4 +225,58 @@ export const api = {
     }
     return result;
   },
+
+  pricing: {
+    async get() {
+      try {
+        const res = await fetch(`${API_BASE}/pricing.php`);
+        const result = await res.json();
+        if (result && result.data) {
+          return { data: result.data, defaults: result.defaults || {}, error: null };
+        }
+        return { data: null, error: new Error(result?.error || 'Gagal memuat harga.') };
+      } catch (err) {
+        console.error('Gagal mengambil harga:', err);
+        return { data: null, error: err };
+      }
+    },
+
+    async update(prices) {
+      const token = localStorage.getItem(TOKEN_KEY);
+      if (!token) throw new Error('Akses ditolak: Anda belum login.');
+
+      const res = await fetch(`${API_BASE}/pricing.php`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ action: 'update', prices }),
+      });
+      const result = await res.json();
+      if (!res.ok || result.error) {
+        throw new Error(result.error || 'Gagal menyimpan perubahan harga.');
+      }
+      return result;
+    },
+
+    async reset() {
+      const token = localStorage.getItem(TOKEN_KEY);
+      if (!token) throw new Error('Akses ditolak: Anda belum login.');
+
+      const res = await fetch(`${API_BASE}/pricing.php`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ action: 'reset' }),
+      });
+      const result = await res.json();
+      if (!res.ok || result.error) {
+        throw new Error(result.error || 'Gagal mereset harga.');
+      }
+      return result;
+    },
+  },
 };
