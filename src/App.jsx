@@ -1,114 +1,180 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, createContext, useContext } from 'react';
 import {
   Camera, GraduationCap, Users, Sparkles, Heart, CalendarDays, Clock,
   ChevronLeft, ChevronRight, Check, Lock, Unlock, Instagram, MessageCircle,
-  X, Star, Pin, ScrollText, PartyPopper, Loader2, MapPin, Landmark, Upload, Copy, ImageOff, Wallet, CircleDollarSign, Trash2
+  X, Star, Pin, ScrollText, PartyPopper, Loader2, MapPin, Landmark, Upload, Copy, ImageOff, Wallet, CircleDollarSign, Trash2,
+  Tag, Save, RotateCcw, CheckCircle2, AlertCircle
 } from 'lucide-react';
+import { api } from './lib/api.js';
 
 /* ---------------------------------------------------------------
-   DATA — sourced from the meimories.cam price guide
+   DATA & PRICING CONFIGURATION (Dynamic + Fallback Defaults)
 --------------------------------------------------------------- */
-const PACKAGES = {
-  regular: {
-    label: 'Regular Pack',
-    icon: Camera,
-    tagline: 'Untuk sempro, semhas, sidang & momen harian',
-    items: [
-      {
-        id: 'mini', name: 'Mini Meimories', price: 95000, duration: '30 menit', photos: '20 foto edit warna',
-        desc: 'Cocok untuk kamu yang ingin mengabadikan momen singkat.',
-        benefits: ['Unlimited shoot (sesuai durasi)', 'Durasi 30 menit', '1 lokasi (berbagai spot menyesuaikan)', '20 foto hasil edit warna', 'Semua file dikirim via Google Drive', 'Tidak ada batasan orang yang ikut berfoto dalam satu sesi (selama masih berfoto bersama klien yang booking)'],
-      },
-      {
-        id: 'sweet', name: 'Sweet Meimories', price: 150000, duration: '45 menit', photos: '30 foto edit warna', favorite: true,
-        desc: 'Paket favorit untuk kamu yang ingin leluasa mengabadikan momen.',
-        benefits: ['Unlimited shoot (sesuai durasi)', 'Durasi 45 menit', '1 lokasi (berbagai spot menyesuaikan)', '30 foto hasil edit warna', 'Semua file dikirim via Google Drive', 'Tidak ada batasan orang yang ikut berfoto dalam satu sesi (selama masih berfoto bersama klien yang booking)'],
-      },
-      {
-        id: 'signature', name: 'Signature Meimories', price: 185000, duration: '60 menit', photos: '40 foto edit warna',
-        desc: 'For memories you\u2019ll treasure forever.',
-        benefits: ['Unlimited shoot (sesuai durasi)', 'Durasi 60 menit (1 jam)', '1 lokasi (berbagai spot menyesuaikan)', '40 foto hasil edit warna', 'Semua file dikirim via Google Drive', 'Tidak ada batasan orang yang ikut berfoto dalam satu sesi (selama masih berfoto bersama klien yang booking)'],
-        extra: 'Tambah durasi 30 menit: Rp40.000',
-      },
-    ],
-  },
-  graduation: {
-    label: 'Graduation Pack',
-    icon: GraduationCap,
-    tagline: 'For the milestone you\u2019ll never forget — Yudisium & Wisuda',
-    items: [
-      {
-        id: 'moment', name: 'The Moment', price: 155000, duration: '30 menit', photos: '30 foto edit warna',
-        desc: 'Paket khusus untuk mengabadikan momen yudisium ataupun wisuda secara singkat.',
-        benefits: ['Unlimited shoot (sesuai durasi)', 'Durasi 30 menit', '1 lokasi (berbagai spot menyesuaikan)', '30 foto hasil edit warna', 'Semua file dikirim via Google Drive', 'Bebas foto bersama keluarga, pasangan, dan sahabat'],
-      },
-      {
-        id: 'journey', name: 'The Journey', price: 250000, duration: '1 jam', photos: '35 foto edit warna',
-        desc: 'Untuk kamu yang ingin dokumentasi di hari yudisium ataupun wisuda.',
-        benefits: ['Unlimited shoot (sesuai durasi)', 'Durasi 1 jam', '1 lokasi (berbagai spot menyesuaikan)', '35 foto hasil edit warna', 'Semua file dikirim via Google Drive', 'Bebas foto bersama keluarga, pasangan, dan sahabat'],
-      },
-      {
-        id: 'milestone', name: 'The Milestone', price: 300000, duration: '1 jam 30 menit', photos: '40 foto edit warna',
-        desc: 'Paket khusus untuk mengabadikan momen yudisium ataupun wisuda.',
-        benefits: ['Unlimited shoot (sesuai durasi)', 'Durasi 1 jam 30 menit', '1 lokasi (berbagai spot menyesuaikan)', '40 foto hasil edit warna', 'Semua file dikirim via Google Drive', 'Bebas foto bersama keluarga, pasangan, dan sahabat'],
-      },
-      {
-        id: 'achievement', name: 'The Achievement', price: 325000, duration: '35 menit (pagi) + 1 jam', photos: '45 foto + 10 foto express',
-        desc: 'Untuk kamu yang ingin dokumentasi lebih lengkap di hari yudisium ataupun wisuda.',
-        benefits: ['Unlimited shoot (sesuai durasi)', 'Durasi 35 menit sesi pagi dan 1 jam sesi (siang/sore/malam)', '1 lokasi (berbagai spot menyesuaikan)', '45 foto hasil edit warna', 'Dikirim 10 foto edit tone terbaik secara express', 'Semua file dikirim via Google Drive', 'Bebas foto bersama keluarga, pasangan, dan sahabat', '1 konten recap foto momen untuk snapgram'],
-      },
-      {
-        id: 'graduatestory', name: 'The Graduate Story', price: 400000, duration: '1 jam (pagi) + 1 jam', photos: '50 foto + 15 foto express', favorite: true,
-        desc: 'Paket premium untuk mengabadikan seluruh cerita di hari wisuda.',
-        benefits: ['Unlimited shoot (sesuai durasi)', 'Durasi 1 jam (sesi pagi) dan 1 jam (sesi siang/sore/malam)', '1 lokasi (berbagai spot menyesuaikan)', '50 foto hasil edit warna', 'Dikirim 15 foto edit tone terbaik secara express', 'Semua file dikirim via Google Drive', 'Bebas foto bersama keluarga, pasangan, dan sahabat', '1 konten recap foto momen untuk snapgram'],
-      },
-    ],
-  },
-  group: {
-    label: 'Group Pack',
-    icon: Users,
-    tagline: 'Because the best memories are made together',
-    items: [
-      {
-        id: 'bestie', name: 'Bestie Meimories', people: '2\u20133 orang', price: 270000, duration: '40 menit', photos: '30 foto edit warna', perPerson: 100000,
-        desc: 'Because the best memories are made together.',
-        benefits: ['Unlimited shoot (sesuai durasi)', 'Terdapat personal shoot (jumlah foto menyesuaikan durasi)', 'Durasi 40 menit', '1 lokasi (berbagai spot menyesuaikan)', '30 foto hasil edit warna', 'Semua file dikirim via Google Drive', 'Tambah orang: Rp100.000/orang'],
-      },
-      {
-        id: 'circle', name: 'Circle Meimories', people: '3\u20135 orang', price: 445000, duration: '1 jam', photos: '40 foto edit warna', perPerson: 100000,
-        desc: 'Every friendship deserves to be remembered.',
-        benefits: ['Unlimited shoot (sesuai durasi)', 'Terdapat personal shoot (jumlah foto menyesuaikan durasi)', 'Durasi 1 jam', '1 lokasi (berbagai spot menyesuaikan)', '40 foto hasil edit warna', 'Semua file dikirim via Google Drive', 'Tambah orang: Rp100.000/orang'],
-      },
-      {
-        id: 'together', name: 'Together Meimories', people: '6\u20138 orang', price: 745000, duration: '1 jam', photos: '40 foto edit warna', perPerson: 100000,
-        desc: 'The people who made the journey unforgettable.',
-        benefits: ['Unlimited shoot (sesuai durasi)', 'Durasi 1 jam', 'Terdapat personal shoot (jumlah foto menyesuaikan durasi)', '1 lokasi (berbagai spot menyesuaikan)', '40 foto hasil edit warna', 'Semua file dikirim via Google Drive', 'Tambah orang: Rp100.000/orang'],
-      },
-      {
-        id: 'forever', name: 'Forever Meimories', people: '10\u201315 orang', price: 1000000, duration: '1 jam 35 menit', photos: '60 foto edit warna',
-        desc: 'Every friendship deserves to be remembered.',
-        benefits: ['Unlimited shoot (sesuai durasi)', 'Terdapat personal shoot (jumlah foto menyesuaikan durasi)', 'Durasi 1 jam 35 menit', '1 lokasi (berbagai spot menyesuaikan)', '60 foto hasil edit warna', 'Semua file dikirim via Google Drive'],
-      },
-    ],
-  },
-  polaroid: {
-    label: 'Foto Polaroid',
-    icon: Sparkles,
-    tagline: 'Celebrating your achievement, preserving your meimories — via Instax Mini 8',
-    items: [
-      { id: 'p1', name: '1 Polaroid', price: 25000, photos: '1 lembar polaroid' },
-      { id: 'pmini', name: 'Paket Mini', price: 110000, photos: '5 lembar polaroid' },
-      { id: 'psweet', name: 'Paket Sweet', price: 210000, photos: '10 lembar polaroid' },
-      { id: 'pmemories', name: 'Paket Memories', price: 299000, photos: '15 lembar polaroid' },
-      { id: 'punlimited', name: 'Paket Unlimited Fun', price: 390000, photos: '20 lembar polaroid' },
-    ],
-  },
+const IDR = (n) => 'Rp' + Math.round(Number(n) || 0).toLocaleString('id-ID');
+
+const DEFAULT_PRICES = {
+  // Regular Pack
+  mini: 95000,
+  sweet: 150000,
+  signature: 185000,
+  // Graduation Pack
+  moment: 155000,
+  journey: 250000,
+  milestone: 300000,
+  achievement: 325000,
+  graduatestory: 400000,
+  // Group Pack
+  bestie: 270000,
+  circle: 445000,
+  together: 745000,
+  forever: 1000000,
+  group_per_person: 100000,
+  // Foto Polaroid
+  p1: 25000,
+  pmini: 110000,
+  psweet: 210000,
+  pmemories: 299000,
+  punlimited: 390000,
+  // Addons & Kebijakan
+  addon_duration30: 40000,
+  addon_location: 40000,
+  dp_min_percent: 50,
 };
 
-const ADDONS = [
-  { id: 'duration30', label: 'Tambah durasi 30 menit', price: 40000 },
-  { id: 'location', label: 'Tambah 1 lokasi berbeda', price: 40000, note: 'Rp35.000\u201350.000 tergantung jarak, disamakan Rp40.000 di sini' },
-];
+function getCatalog(p) {
+  const pr = { ...DEFAULT_PRICES, ...(p || {}) };
+  const dpPercent = Number(pr.dp_min_percent) || 50;
+  const groupPerPerson = Number(pr.group_per_person) || 100000;
+  const addonDurPrice = Number(pr.addon_duration30) || 40000;
+  const addonLocPrice = Number(pr.addon_location) || 40000;
+
+  const packages = {
+    regular: {
+      label: 'Regular Pack',
+      icon: Camera,
+      tagline: 'Untuk sempro, semhas, sidang & momen harian',
+      items: [
+        {
+          id: 'mini', name: 'Mini Meimories', price: Number(pr.mini) || 95000, duration: '30 menit', photos: '20 foto edit warna',
+          desc: 'Cocok untuk kamu yang ingin mengabadikan momen singkat.',
+          benefits: ['Unlimited shoot (sesuai durasi)', 'Durasi 30 menit', '1 lokasi (berbagai spot menyesuaikan)', '20 foto hasil edit warna', 'Semua file dikirim via Google Drive', 'Tidak ada batasan orang yang ikut berfoto dalam satu sesi (selama masih berfoto bersama klien yang booking)'],
+        },
+        {
+          id: 'sweet', name: 'Sweet Meimories', price: Number(pr.sweet) || 150000, duration: '45 menit', photos: '30 foto edit warna', favorite: true,
+          desc: 'Paket favorit untuk kamu yang ingin leluasa mengabadikan momen.',
+          benefits: ['Unlimited shoot (sesuai durasi)', 'Durasi 45 menit', '1 lokasi (berbagai spot menyesuaikan)', '30 foto hasil edit warna', 'Semua file dikirim via Google Drive', 'Tidak ada batasan orang yang ikut berfoto dalam satu sesi (selama masih berfoto bersama klien yang booking)'],
+        },
+        {
+          id: 'signature', name: 'Signature Meimories', price: Number(pr.signature) || 185000, duration: '60 menit', photos: '40 foto edit warna',
+          desc: 'For memories you\u2019ll treasure forever.',
+          benefits: ['Unlimited shoot (sesuai durasi)', 'Durasi 60 menit (1 jam)', '1 lokasi (berbagai spot menyesuaikan)', '40 foto hasil edit warna', 'Semua file dikirim via Google Drive', 'Tidak ada batasan orang yang ikut berfoto dalam satu sesi (selama masih berfoto bersama klien yang booking)'],
+          extra: `Tambah durasi 30 menit: ${IDR(addonDurPrice)}`,
+        },
+      ],
+    },
+    graduation: {
+      label: 'Graduation Pack',
+      icon: GraduationCap,
+      tagline: 'For the milestone you\u2019ll never forget — Yudisium & Wisuda',
+      items: [
+        {
+          id: 'moment', name: 'The Moment', price: Number(pr.moment) || 155000, duration: '30 menit', photos: '30 foto edit warna',
+          desc: 'Paket khusus untuk mengabadikan momen yudisium ataupun wisuda secara singkat.',
+          benefits: ['Unlimited shoot (sesuai durasi)', 'Durasi 30 menit', '1 lokasi (berbagai spot menyesuaikan)', '30 foto hasil edit warna', 'Semua file dikirim via Google Drive', 'Bebas foto bersama keluarga, pasangan, dan sahabat'],
+        },
+        {
+          id: 'journey', name: 'The Journey', price: Number(pr.journey) || 250000, duration: '1 jam', photos: '35 foto edit warna',
+          desc: 'Untuk kamu yang ingin dokumentasi di hari yudisium ataupun wisuda.',
+          benefits: ['Unlimited shoot (sesuai durasi)', 'Durasi 1 jam', '1 lokasi (berbagai spot menyesuaikan)', '35 foto hasil edit warna', 'Semua file dikirim via Google Drive', 'Bebas foto bersama keluarga, pasangan, dan sahabat'],
+        },
+        {
+          id: 'milestone', name: 'The Milestone', price: Number(pr.milestone) || 300000, duration: '1 jam 30 menit', photos: '40 foto edit warna',
+          desc: 'Paket khusus untuk mengabadikan momen yudisium ataupun wisuda.',
+          benefits: ['Unlimited shoot (sesuai durasi)', 'Durasi 1 jam 30 menit', '1 lokasi (berbagai spot menyesuaikan)', '40 foto hasil edit warna', 'Semua file dikirim via Google Drive', 'Bebas foto bersama keluarga, pasangan, dan sahabat'],
+        },
+        {
+          id: 'achievement', name: 'The Achievement', price: Number(pr.achievement) || 325000, duration: '35 menit (pagi) + 1 jam', photos: '45 foto + 10 foto express',
+          desc: 'Untuk kamu yang ingin dokumentasi lebih lengkap di hari yudisium ataupun wisuda.',
+          benefits: ['Unlimited shoot (sesuai durasi)', 'Durasi 35 menit sesi pagi dan 1 jam sesi (siang/sore/malam)', '1 lokasi (berbagai spot menyesuaikan)', '45 foto hasil edit warna', 'Dikirim 10 foto edit tone terbaik secara express', 'Semua file dikirim via Google Drive', 'Bebas foto bersama keluarga, pasangan, dan sahabat', '1 konten recap foto momen untuk snapgram'],
+        },
+        {
+          id: 'graduatestory', name: 'The Graduate Story', price: Number(pr.graduatestory) || 400000, duration: '1 jam (pagi) + 1 jam', photos: '50 foto + 15 foto express', favorite: true,
+          desc: 'Paket premium untuk mengabadikan seluruh cerita di hari wisuda.',
+          benefits: ['Unlimited shoot (sesuai durasi)', 'Durasi 1 jam (sesi pagi) dan 1 jam (sesi siang/sore/malam)', '1 lokasi (berbagai spot menyesuaikan)', '50 foto hasil edit warna', 'Dikirim 15 foto edit tone terbaik secara express', 'Semua file dikirim via Google Drive', 'Bebas foto bersama keluarga, pasangan, dan sahabat', '1 konten recap foto momen untuk snapgram'],
+        },
+      ],
+    },
+    group: {
+      label: 'Group Pack',
+      icon: Users,
+      tagline: 'Because the best memories are made together',
+      items: [
+        {
+          id: 'bestie', name: 'Bestie Meimories', people: '2\u20133 orang', price: Number(pr.bestie) || 270000, duration: '40 menit', photos: '30 foto edit warna', perPerson: groupPerPerson,
+          desc: 'Because the best memories are made together.',
+          benefits: ['Unlimited shoot (sesuai durasi)', 'Terdapat personal shoot (jumlah foto menyesuaikan durasi)', 'Durasi 40 menit', '1 lokasi (berbagai spot menyesuaikan)', '30 foto hasil edit warna', 'Semua file dikirim via Google Drive', `Tambah orang: ${IDR(groupPerPerson)}/orang`],
+        },
+        {
+          id: 'circle', name: 'Circle Meimories', people: '3\u20135 orang', price: Number(pr.circle) || 445000, duration: '1 jam', photos: '40 foto edit warna', perPerson: groupPerPerson,
+          desc: 'Every friendship deserves to be remembered.',
+          benefits: ['Unlimited shoot (sesuai durasi)', 'Terdapat personal shoot (jumlah foto menyesuaikan durasi)', 'Durasi 1 jam', '1 lokasi (berbagai spot menyesuaikan)', '40 foto hasil edit warna', 'Semua file dikirim via Google Drive', `Tambah orang: ${IDR(groupPerPerson)}/orang`],
+        },
+        {
+          id: 'together', name: 'Together Meimories', people: '6\u20138 orang', price: Number(pr.together) || 745000, duration: '1 jam', photos: '40 foto edit warna', perPerson: groupPerPerson,
+          desc: 'The people who made the journey unforgettable.',
+          benefits: ['Unlimited shoot (sesuai durasi)', 'Durasi 1 jam', 'Terdapat personal shoot (jumlah foto menyesuaikan durasi)', '1 lokasi (berbagai spot menyesuaikan)', '40 foto hasil edit warna', 'Semua file dikirim via Google Drive', `Tambah orang: ${IDR(groupPerPerson)}/orang`],
+        },
+        {
+          id: 'forever', name: 'Forever Meimories', people: '10\u201315 orang', price: Number(pr.forever) || 1000000, duration: '1 jam 35 menit', photos: '60 foto edit warna',
+          desc: 'Every friendship deserves to be remembered.',
+          benefits: ['Unlimited shoot (sesuai durasi)', 'Terdapat personal shoot (jumlah foto menyesuaikan durasi)', 'Durasi 1 jam 35 menit', '1 lokasi (berbagai spot menyesuaikan)', '60 foto hasil edit warna', 'Semua file dikirim via Google Drive'],
+        },
+      ],
+    },
+    polaroid: {
+      label: 'Foto Polaroid',
+      icon: Sparkles,
+      tagline: 'Celebrating your achievement, preserving your meimories — via Instax Mini 8',
+      items: [
+        { id: 'p1', name: '1 Polaroid', price: Number(pr.p1) || 25000, photos: '1 lembar polaroid' },
+        { id: 'pmini', name: 'Paket Mini', price: Number(pr.pmini) || 110000, photos: '5 lembar polaroid' },
+        { id: 'psweet', name: 'Paket Sweet', price: Number(pr.psweet) || 210000, photos: '10 lembar polaroid' },
+        { id: 'pmemories', name: 'Paket Memories', price: Number(pr.pmemories) || 299000, photos: '15 lembar polaroid' },
+        { id: 'punlimited', name: 'Paket Unlimited Fun', price: Number(pr.punlimited) || 390000, photos: '20 lembar polaroid' },
+      ],
+    },
+  };
+
+  const addons = [
+    { id: 'duration30', label: 'Tambah durasi 30 menit', price: addonDurPrice },
+    { id: 'location', label: 'Tambah 1 lokasi berbeda', price: addonLocPrice, note: 'Rp35.000\u201350.000 tergantung jarak, disamakan di sini' },
+  ];
+
+  const terms = [
+    'Reschedule hanya dapat dilakukan 1x, selama masih ada slot yang tersedia.',
+    'File foto diberikan ketika sudah pelunasan.',
+    'Spot foto free khusus area Untan, Polnep, UMP, dan UPB (area/spot lain kena fee transport tambahan).',
+    'Untuk area/spot di luar itu, silakan chat admin terlebih dahulu untuk menanyakan apakah dikenakan fee transport atau free.',
+    'Jika terjadi pembatalan, DP hangus dan tidak bisa dikembalikan dalam bentuk dan alasan apapun.',
+    `DP minimal ${dpPercent}% dari total harga, atau bisa langsung pelunasan penuh saat booking.`,
+    PAYMENT_NOTE,
+  ];
+
+  return { packages, addons, dpPercent, terms };
+}
+
+const PricingContext = createContext({
+  pricing: DEFAULT_PRICES,
+  packages: getCatalog(DEFAULT_PRICES).packages,
+  addons: getCatalog(DEFAULT_PRICES).addons,
+  dpPercent: 50,
+  terms: getCatalog(DEFAULT_PRICES).terms,
+  reloadPricing: async () => {},
+});
+
+function usePricing() {
+  return useContext(PricingContext);
+}
 
 // Slot jam: 05.30 s/d 20.00, tiap 30 menit
 function buildTimeSlots() {
@@ -128,24 +194,13 @@ const BANK_ACCOUNTS = [
   { bank: 'Bank Jago', account: '103959772276', name: 'Orien Meidina Raihan' },
   { bank: 'Bank BCA', account: '0292757806', name: 'Orien Meidina Raihan' },
 ];
-const DP_MIN_PERCENT = 50;
 const PAYMENT_NOTE = 'Pelunasan wajib dilakukan paling lambat H-1 (satu hari) sebelum sesi foto dimulai.';
 
-const TERMS = [
-  'Reschedule hanya dapat dilakukan 1x, selama masih ada slot yang tersedia.',
-  'File foto diberikan ketika sudah pelunasan.',
-  'Spot foto free khusus area Untan, Polnep, UMP, dan UPB (area/spot lain kena fee transport tambahan).',
-  'Untuk area/spot di luar itu, silakan chat admin terlebih dahulu untuk menanyakan apakah dikenakan fee transport atau free.',
-  'Jika terjadi pembatalan, DP hangus dan tidak bisa dikembalikan dalam bentuk dan alasan apapun.',
-  `DP minimal ${DP_MIN_PERCENT}% dari total harga, atau bisa langsung pelunasan penuh saat booking.`,
-  PAYMENT_NOTE,
-];
-
-const IDR = (n) => 'Rp' + Math.round(n).toLocaleString('id-ID');
 const pad2 = (n) => String(n).padStart(2, '0');
 const dateKey = (y, m, d) => `${y}-${pad2(m + 1)}-${pad2(d)}`;
 const MONTH_NAMES = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 const DAY_NAMES = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
+
 
 const GALLERY_IMAGES = [
   "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAwICQsJCAwLCgsODQwOEh4UEhEREiUbHBYeLCcuLisnKyoxN0Y7MTRCNCorPVM+QkhKTk9OLztWXFVMW0ZNTkv/2wBDAQ0ODhIQEiQUFCRLMisyS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0v/wAARCAFAAeADASIAAhEBAxEB/8QAHAAAAQUBAQEAAAAAAAAAAAAABQECAwQGAAcI/8QAQxAAAgEDAwIDBQYEBQIGAQUAAQIDAAQRBRIhMUETUWEGInGBkRQyQqGxwSNS0fAVM2Jy4STxBxY0Q4KSRVNjZHOD/8QAGQEAAwEBAQAAAAAAAAAAAAAAAAECAwQF/8QALREAAgICAgEEAgEDBAMAAAAAAAECEQMhEjFBBBMiUTJhkXGB0QVCUvCxweH/2gAMAwEAAhEDEQA/ADTQgfdJX07VCysOq59RV1l4qJlrlo3KZAPQ1gfaWYy6vP5IQg+Veh3ARI3kcDailj8q8tnlM0jyHq7Fj86qC2RN6IKY/WpMZprIc5rYxI6XdxiuI86SmAuc0uKZTuhoAXFJ3pc0wnmgCxbxrLJsdiqkckUl7Ym0IxMrg8Y6Nz6UzHCgHknzxxSPI8jAOxbHPPWp2UqehUB2kDqcAVr7O38G3jjH4Vx86y9kB40ZPQNuPyrSQXfbOT5Hr/X9awy2zeLSLZSmMKlEisoJ4yM89K4gVg0aFdhVO50+C4yXjAb+ZeDRFhUbLStroYAl0me3fxLWUkjpg4IqSDXLy0YJdx+IB3Iw3/NGcVDNCki4dQw9RWiy/wDLZHH6JbTVrS8wFk2ufwPwavDiszcaRG2TESh8jyKiiudS03jJkiHZveH/ABVLjLpi2uzVinA0Gs/aC2lws4MD+Z5X60XR1kQNGwZT0YHINDTXYdkma4U3NcDQKh4OKcDTAaUUASClFMBxS7qYh+a7NNBBpaAFpaSloA6kpa6gBK6uNJQAtJupCaaTQOiUPShqrM+2m/aUDbS6g+RNKwou7q7NV1kzUitmnZNEoNLmmA04A+VMB1dXAeZp2BQISlxS5rqYHYFdwKSupgLXUldQAtdSUtACEU0inmmkUAGiQ33SDTCKfJsbk4JqobpB0fgdmpMsHe1l0LTRJz+KXES/Pr+Wa83LA1rPb67MjWluONqmQjPXPA/Q1jq0gtGM3sk6V1cmNuT1zSnNUQN7c10MDTzRxIMu7BR8TXMRjFXdFiZ7ppEGWjQ7B5ufdX8z+VVFW6E3SIZtLuYSWVVnRfxwncPp1H0qnW3+xyf4K1vBOsskMzMzRIS24AcAj1796zzz+NxcwpOf5iNr/wD2H75rf2eV8TL3K/IEYyaY/Wrt9BHBezRRFikZx73XPf8APNQD3Ru79qw6NkQ5J6nNTye7tXuq1wUZEkm45O5s/i58/rTZG8SVmxjcxOPKkyo6CFgu0bu+AKuqN2AO5wPj+n6VN/hc0USkLuBGeKbCpR2Yg5QZ5HfoK527NqJJJmWYlTgDgeoFOS8x94Y88f3+oqsSACD8/wC/6ionOehBHap7GFFulI6g/l/xTvGB47+tBMtuwOpqRrpkkIByi8fSpcPofP7C26uzmqEV4rHBODVpJQf+KhxaKUkx7LTClSghhTguakoHT6fDNyV2t5rxVMWV5ZNvs5j8AcZ+XejpjpPDqlOSE4pg+29opIzsvoDn+ZBg/SjNreW94MwSq57joR8qoT2ySjEiBh6ihs2kYO+3cow6ZP71opxfehcWanBpc1mIdU1GwIW5Tx4x3br9aL2etWd3hd/hOfwycfn0p0+yQiDXZpMeVdyKQUOBp4JqMGnA0CHg06o6cDTEOrsVwNLQAldilrsUANK0wpUuKXAoAH37rb2ssr9FXp5msc+RDuJy8rZJ9B/z+lH/AGquRsit17ncfXH/ADWfueJNg6IAv9fzzVxRtCN7ZYtdZubNcE+Ig7MenwNayynS4iSRTuVhkGsBOeg7Uc9ltQ8OQ2kh4bmP49xVShq0Yyl86NihqQVBG2amU1Ah1KKbSimAtcK6uoAWkpaSmB1dXZrs0ALXZpKSgQ6krq6gCfVJDFEJMkYOQy+f/NA5L3M2DwC4PXqDmpLq/eOORXkUdsMAc0B1CXbh4/uyjz9eTWDbb0bdIp67cC+1GWfccEhVHkBxQxkYds/CrA6801jjjsK61o5G7ZH0AHpXZpxOaaFyaYjqPaRY3g00XdpCXJuASQM4CdOPLJ/KgGCOeteladbG20myjhP+XGCXVjtJPJ5HHXzq4Pi7E1y0CrbR0lnN5bO27d4hgRl3BuuN2eBnzGao6lp7WmpC5khaOFt0xVip5X3iBg9M4HzrSyYlAa4hWTHR+jD1DL/xQP2wHgWMZ8WdnnPhIkpBKrkMTnvnArZZWZvGqMipZyzvyzEkn1NMl6YqcLxgVE/JNc1mxCOAQOhpKeVpMUxF3S9RntJ4x4reBuG5CcjFa9obe9QNG8cgYZAPGR6Vgs9avajqRuWtzCrQpBEEUBu/c1Eo2XGVGguNM2/dJTyDciqE1pLHyyHH8y81atdYbTtMs2vPEne53P1GVTOB8aIW1/p99xDMEc/hPun6H9qzcWjTkmAEGCW7IM/PtVcr3rUXGmhweN2f5eDQ6bS2BPhtk+TcGl0OgLinpKycg8VYmtXjOHQj4ioWjI7U7JotQ3W1Az5JJ4+VXIrlXGQwNCpV2tsHRBj596RCQc9D51DimUpNGgRwcdj6084oNFcyJxnI7/3/AMVbhuwwJPAAz/f/AHrNwZopFtlqJhg09ZlYf0rjg9KzaKISARgjiqdxpsEvIGxvMUQKeVMYedCbXQwfbte6ecJIXi8uo+lHbO7F0gxjd6Gh5FMK4bepKt/MpwapzbKTj1JBpvdPIxShgaFS6lKtq6zqJAoyGHBBFBLbVruGQnxN68kq3OK0hckROMU/izZg04UN0vUkv4BIoww4ZT2NEAxNMy7JKWmg5pRTAXNLmm0opiHUxyT7o79T5U4+6pJ7VT1Gf7HYTTE+8Fwv+48CgaVmY1KYXOpSyf8AtRcD4D+pocxySx6nk1NN/DQRfi+8/wAewpLOA3V3FAPxtg/DvVo6fxjYXh0RbnRB7oW4f+IrHz7D6VmgZIJs8pJG3zBFek7QqBR0AxWX9qdMwft0K+koH5GqhLdM4pq9hrSL5b60SUYDdHXyNEkasFoGofYb0BziGX3X9PI1uVNTJUxxdosA5pc1Gpp4qRjs11IKWmAoNdSUtAHUlLSUALSV1dQI6lpKWgARr8RVtyEx7u6uMfU9Ky99mONQvQk9/wB/pWtv7eN4fESJmZRuLlSxA+fSsdqK4myCzDH3ic1MNyLyaiVt5pygvkqOB61FU8HCfHmuhnMMIPcVxIHJq2qptLucL2HnQ+5be5xjA6YoWwod4i561as9QubJ91rcSQnvsbAPy6UMrqqgNfZ+2FwmFvIEnH88fuP+XBqn7RatHq95A0IkEUMWAH67ief2rPLIy96nhmGTkcmkwLa8KSarE561KzEx+70NQ4O7kVKGxCKZuBqRhkU1U9/0qhETIScilgje4njgTlpGCD5nFGbmwis9BkuJlDTzShYiCfdHeofZlFS9lvZB/DsoWmP+7GF/Oi9Dob7RzI+qtFGf4VqqwIP9o5/PNVYV8eRY0GWYgAepqo7NI7OxyzEkn1NG/Zq2P2r7XKpEECtIWI4JA6ZoekHbLWpapcadf/Z7OT+HAqoVYbgTjk0Ssdd+1afdXNzbgLbAZwchiew7g1jpp3mnklY8yMWPzoxf/wDQ+zVlbdJLxzcP/tHC1PEpMO2up6bfDak3hOfwS1JLpSEiRExznKnKmsJ7p6Ves9UvLIjwJ3Ufyk5H0qXAayfYcm0yVSWwJB1yOv0qo1sVJHf8/wC/rR2y1WJtNt7rVDFC1w7KhAIyB3q8ba3u4w0bpKh6HIP5iocWi00zImMj5f3/AH0pWysI83OfkKPXej7QSmVPYNyPrVC6spVPKHYAAO9TTKBiuy/dOMf3/fSrMV44I3c/3/fnTTD5jp38v7+VMMR6Dkn+/wC+tJ0wVl9LpSoJOM+dS8N360MlGJML0T3R8q6OV0PBI9KzcE+ilIIMnlTGFMiuiSAw6nGanDK/Q5+FZuLRaaYK1WTbCE7ufyoVtZlVEGXlYKKuarIJLxgDlU93+tQWz7L2NgwBhAIz5/2a68a4xIn0Xmgm0C7jlUmSCTCvjz/vkVqbeVJoldGBVhkEd6oo0Gr2B4yjjDDupoXpNzJpd82n3R9xj/Dbtz+x/Wl+S/ZH4v8ARqVNOqNTmpBUlMUGurq4UCEc+78xQX2iuAJYIOoQGZx8OlGn4XPYEGsbfXP2u7vJuoxtX4ZAFNFwVsoMSSSTknk0tpqD6feLNGiuVGCG9aaTgEntRxfZpJ7CJ8tFcFcsSMgn1FaJpdlZ26pBLTtes77CFvBmP4HPX4HvV+WNZEZHUMrDBB7isFf6Zc2LfxoyU/nHKmrGna9d2OELeNCPwOenwPahwvcTmU/DINX09tOu2j5Mbcxt5j/itJ7M6l9qtvAkb+NCMc/iXsf2qO4uLL2gszFG/h3I95Ffgg/uKzdpcS6derIARJG2GU9/MVX5Kn2T+Ls9FU1Ip4qra3CXMCTRHKOMg1ZU1kaDxS0gpaBC1wrq6mAtdXV1ACV1LSUDOrq6uoABr7QILOS2AWXII3dAAe3FZ2dv4jENkZ6+daDVfZqLT7OW6Ek0aRjJXcrA54xng+XnWYMqknBpxjREnoVkVgSVHy4rlQAjBwB513UcdKaxJHPAzWhmc0h6jv7qjH51WlUjjknuav7FBU8biPpUMkYYe6PdHlVoCgRikqaVAhNRGmA2upaSgCSORlIwauA7lzVFRk1eeN4jskBVgOhqGMjbg1NZxGaVR0yaiNFtAgRryN5mCQw++7HoAOaTBC+18gje1sh0gi3N/uaqo/6P2VJ6SahPj/4J/wA1Drcr3uqSTgH+O38Md8ZwKs+1O2K6t9PQ+5YwLGf9x5amuhv7AXetpo2qwad7P25u4iImkZBtG4t3JINY+OMs4VRknoKNe04Fu1np6ni1hG7/AHHk03sS0Friw0TVk3WRjWZyAoiback45Q0D9q7lZ9Zkji/yrZRAgHkv/NSezMapcXF9KoMdnCX5/m7UFdmkdnc5ZiST6mklsbehYx1NSwq08ixxjLuQqj1PAqMe6uPOjnshbq+q/aZR/Bs42nc/Acfn+lUJKzva6RY76DT4j/DsYVi/+WMn9qD213PaSb7eZ4m80bGaPX3stqt1m/UJM9x/FaMNh1Lc4560AuLae1kMdzDJE4/C6kGkhs1uge0d7NFdNdLG8FrF4juBgnyGOmTRZdZ0yWxivJS0EU0hjBZce8Bk8eXrWVObD2WjULmXUZtxHfYvT6mm+1OLZrLS1PFlAPE//sf3m/alVjto2J0+2vU8W3aOUfzRtzVCTSJI5Mp72OdpGDntWGtrqe1cPbyvGw7o2K2y+0U2naNp8+pA3Mt2WYAYVlQdD6mocC1MoS2ckRxIrKfUVEYD0IrS2Ot6TqgCJOqyH/25htP58H5VPcaNEQSgKZ8un0rNwaLTTMkIiA7DPAx8zUUhaFGc5G0Zo/NpdwhXaFZMkvjv5EUD17+BCkRGGc5x6Cpp3RSVgQksck5JPJpHiV4RLu/iMx9307VYtbR7oPtIUKOT8ammtleXYqjEShcjzrVzURuDnJRRW06/uNMlLou6M8Mp6H50UvLmz1u3AjbwbtOUV+M+gNE7fSEWxigZmWWXzGQSef0odc6BHOzSRfwFdjsGMqB0Gfj+9QpxbvozlBx0tov+z+pG7hMMxIuIuGB6kedGhWEe2v8ARbtJ3jPun745Vh5ZrZ2l9b3FtHMsiKrjIDMAR5iica2gi70y11rqj+0wDrPF/wDcVwubckATxEnoN4qRlfWbn7Lp0rg4ZhsX4msdD9yYf6P0Ioz7V3WZorYHhBvb4np+X60Fg5kI80YflVJaNsa0S6Zbfa9QhiIyud7fAc/0rdKMAChHs7aiKzWRlG+Q7s45x2owaTdmc3cmMkiSRSGAOaAal7MxS5e1PhP5D7p+XatFSGhNrozaT7POLuyuLJ8TxleeGHQ/A1BLI8r7pGLN3J6mvSpoI50KSIGU9QRWd1L2WVsvZNtP8jdPl5VrHIvJm4fRW9lNR8KY2cre65zHns3cfOteteazW9xZTASo0UinIP7it5ol+NRsUlyPEHuyDyb/AJ60pryhxfgIilpoNLmoKHUtNzXZoAdS03NKDTAcRSUvakoA6krqSgAZ7dXxWxhtQ3Mr7m+C/wDJ/KsMcVpva0rc6y6FdqwqE4Pfqf1oI9iTzG+fRhitU0Zy7KsZ5J7ClVjI444zwKV42iBVhiki2g+9x51RJbRchj26ZNMLKTwcKOnrUZlaZwq/dHSrKRgAbRyT/ZpgUJVZhuPC9hUBHNEbv3BhRz5ntQ8igBldTsVyrk4oAtabbme5RcZGa0ftZp5htbScL7wHhuR8Mj96k9ltMAdpmX3QvU/CintoHj0xGCr4bOAxJ5zXM5XO0dShxxuzAKWLACiNrFGEPiMZHc8IDjJ8yewH61FBbSSzJGkZM0mNi48+9H9S0ttO0tYLeIzXbRl5WjG7A6DHpyTWzZzpA3RGOq+0cVxcY8K3UzN5BEGR+eKFXN7JczXErYJnkMhJHPU45+dFNMU2Pszqd2wKyXLLaR5GDjq1A+1UAa9lbRbrV4Wk/wAuM73+C8/0q4ZrSeK/1K4mhd57jYLZ0ySvmD2xxUelH7B7O3950eQCCM+p60AgR55o4I+WkYIo9ScCl2BodTjg0/2Wi8KLwptRlyRuz7i/tnFZqNDI2BR721mX/FY7GI/wrCFYF+OMmg6qY41YE5b3jg/SmDFmh2SKpPbmjSIlj7OTSAfxL2Tw1PcKOv71nmds5q6+o+PDBC8aIsK4BXv6mk07BNUX7H2n1Wxwon8eMfgnG7j49al1zX5faOKzs1tvBcSc4bcGJ4GPqaFNGGXcMEelEfZaNV1OW8lH8HT4mnb4ge6PrTEm+gk8UN37W29of/SaVGN/ltjG5vz4rLX101/e3F3J9+eQufmaMWkj23s3qeoSH+PqMotkPfH3pD+1A0TJyOR5GgdkljaveXkFrHy0zhB8zRX2yuEm1p7eL/IskW3jA/09fzzVn2PiW1ubzVpV/hafA0i57ueFFASGmZmf3pGYlmJ8+f60B4IQvFFdH12+02aMJcSNbhhviJyCO+M9KpRGMfej3D41CXUsSox6UC/ZuI/be3aYiWxkRC3DI4JA9R51n/aTUE1LVHlgyYFULHkYyO5x8c0NjQkZPepPCbyqKRcZtM0tlYfYtAS6kOHl98j07UzRrDx5YVYcyHe3w6/pQz/E7yS2W2mlaSFcYVuoHlmtX7LTRXCXVwY2TwVAOenPPX5VzZYtv9HZhyxSb8lloWlupip4iTw0P+tuv0FTm0jZNm0bQMbSO1W7G3IgjLj32zK/xbp9BVvwgeCKfHRnZm5ovALRTDMZBILdGXuD8KwV39nS6lW0bdBuymfKtV7d35guoreJiPDTLAHHLf8AH61jHcMR148zmtsSMcuqRLmuzkiokJJqVTg5rQxJD7xy2SfPNSWqhpgGcKGG3J7Z4/TNR8GuUHNS1ZrHJKPRv7dVWJRHjYBhcdMVJWGtL24tGzDKyj+XqD8qN2ntIjELdR7f9acj6Vk4ND5Jh2uBpkMsdxEJIWDoehFOqSjqWkrqBFLWNOTUrNo8ASr70beR/oayeg37aXqW2bKxudkoPb1+RrdCsv7W6Xj/AK+FevEoH5GtIP8A2siS8mpz3pc0C9ldR+12htpWzLAOM917fTp9KOVLVOik7FBpc02loAXNKDTaWgB4NKaYKd2pgJSZrjXUAY69na5vJ526yOWx5VHuwhOKFiRx0NTi4ZR7+OOa04mdjLt/fxnJHU1TLE8ClkkLsST1poBrRKhMswukQy3Pp51JFcktgDk96qKhJ5NTxoqcnGfU0CLNz0wSOnaqRQnk8CrTFQuV5Y/lUDE5A6nvQAq25YADvRXQ9CmvLhSU9xTkk9DS+zli+oXZGMxxjJ/YV6Zp2nJawqgABxk4rKcn0joxwX5Mr2dgIIVQYJHUgd6Ee0+lxTNFPM2yOMMWOCcntwOvNavYB0qjqDQSBLeTBEmcg/y45rHo6H8lR53pt0iahJcE5dQSo7seigUd0+edTLPMxLs20c4Ax1x/fas4kTWmqyLZHxPClIjfrn1q/DqbwXYgYkW6sAwwG+P71b30c6XFKzTXdlFqFrDHdIjKoLFZQeWPcMOlA732NgI3wPLB/uHiR/Uc09dZiN1KytJHluCrdu3BopZ6n4je46OepKnw2/oapSJcbMr7U4sdO07TFZWKqZpWToWJwP3qD2Kt1fWDdyj+DYxNO5+A4/P9K181xpWoKVvERmPG+RNjY/3L+9C9Xs7PRPZ+9XTfEZtQZUyzBgFHJAI61cZJrTJcWnsxskr3t5LcSctI5dvmc1NLjwzmooiEj8yT9TTsb0Pf1qzNspnrXdKmaIgZNRKhdgqjJNMCa3mMZweVPaj822x9kiyAiXVJ+ncxp/U4oemjSnTDe5wo5UHuPOiehxvq+paVBcH/AKeyTkf6FJYn9BUck+i+DXZX9qENrHpukoD/ANHbhpAO8r+837Cqlrp5+x+I+Q5JPXoK0N3YrfXk11cMWeZy5HQDPb6Uz7CktxFawLt8RgvFYPNeka+0vJHqA/w72StrUDE2pTeKwH8i9PzxUc2iwpZopBWWNfeZOrZHT18qNe09sbi6VYUXZagRpjgjHl86zdxqV3byJ45E0fbcNpPoSKpTt8US4UuRWfTZkZkQYAzkyYAHHTNC1jy4AGM0ZudTSaxMKq8blTkDo245Of6VUt0aWYc7kjGF4xitLaWzLXglSLGAOgqYR88j6UqIQfKpl5yTWTstEMka8VtdJtY4NKtrRHVnuJAZ8c7c8kHy4GKytqqTzIpI2j3m9AOTW89nbcx6eHkX3pyZDn16D6VPbo0iq2XYiHUyYwHO4fDt+WKexREZ2ICKCSfIDrUyRgKMDA7elAfbe8FjoMoU4kuSIlx5HlvyH51VFI811m5fUr+W5LL/ABHLAE447flihm056VbcSYOGOD2zkfSowmDzW0dKjCb5SbEjTtUxjK9RT4FDHjtVtY/OpchJFELUsaZPNWHgGRgYPpT0iKr0z8KTkOisyEDgZqNUYsAvUnGKIiLIz1ojolik1740gHh2ymViR5dB9aXIfGyCGxkjfwZittIOAJS8e75g4q+ulakg/hucdttwx/XNadZYr2xle4hDLGo3o4B5J4x6HzoaunMj506Z7fJGI29+M59D0rFqVnQpQeivHFqBfDRKqqOcsPe+B7H408uWbw4nAuP/ANGUbGPw8/iM1ed720cJfWfcDxImyh/pVmDTW1JZj9naaNGC4IBUHH4T3+IpK+qE1WzMXerTWR23NnJGezdV/KpYp5tUtitvFaTq42vGbjaRn4ij02iXJi/hNcBGH3ZYvFX8+fzoFdezc6uHjjjSUH70btF+RB/WtKJVMH6V7I+0NrdrdW1mH2HDIJk3Fe4IzWjkg1CH/N0i/HwjDfoas6TZ+0lpGknhG4jIyp3JuA+taq11G5ECm70+7WXuEiB/Q1qly/JENKPTMOZJF/zLO8Qf6rdqUTRkZJYf7lIr0AXxPS1vPnFj9TSGa4k4Wy+c0ij8hmj20KzALcQMcCVM/GpAyHoy/WtnJphuwRdC2VTwVhgBP/2b+lJD7O6TDEI1sYiPNskn50e2FmPHPTmnbTWrf2Z0hzn7EoP+lmH703/yvpo+4s6fCY/vR7bC0ZbbSYrUH2Ztfwz3C/8AyB/aom9l1/BfSj4oDS4Mdo8SEbdcZHpUUuTxwPjUk0hUFQeKqkmtEZDgBnzqVF37iegHOKijG4n0q0gVUCFsL1Y+fpTEcsYSPeR7zcLUSgB/hT5Jd0gxwAMAeVRqdvPc0AWfwZPaoNjFWbnzqZSGwPwDgk+dXrW1WVZBxkAfrUt1spK3RqfYmBYLXBHvNhm9euK2CScZrIaC5jOzuIxxWgin7Z+FcvLZ2qOi/JLhTWH9s5pEaFPE3rJmRtvBXtsNbFG3nmsxr6eNqDggDaAPjVR2yZ6iZSyuJInaQ8kDIBFRLcBmJkUgmjz2QMZ90HNDZ7MDPu4rU5WmUHIY5Vs1asbma3JKt1BBB5BFQNajPGRUkcLovXNN0JWiyt2x4I+lM9ob1Db20ET71RTnK9GJ5I8qiaQRKWkAAFDJyZ5i5BC/oKiOON2kW8kqpkf3Uz3NSb9iBe9R53NnsOlIAzvtXkk10GROGU4VjjNaDTfZ6GDZLePHI558AvtHwJ70d0H2etLBBI48adlwWccDPXApkmlwxSMI4Q0niEopUkKOxFc2TL4idmPAluRS9rbqOPSfDVWjaTChcdB/2qL2Pj8LSby9fhpiLWPPl1b8sVS1bTLmXVRbSOGycknOFXAxx08/pW30y1i07Sreye3jkRcuwADDJOehoiqgRO3P+gFIwN1TezgEmoTXbKNlrGSP9x6UTl0qyulIgkkt2PYHcP8A6t+xrrfS59O0t4IgLmWSXc5T3TtHTg1EYNOxuV6K7RpIC+SrE896A69ZKoEqqG3/AHlxnPHWje8AlJA0b/yupU/nWc9pdRMNzHGh94cgVFNuvJSddmdf/Mbg9e9XrIbIs46nNMW3MuZpnJLHPHWrirGigAkjHQ1tLIqoqHos0qdaYoYFc9qTOUK561O0gaM7sBFGAPWm2lncXh22iiV8Z2giojNM0z+ini2tryHfZDR47i3vLq7YLEf4StnA8yf0rX2lrNAArTmWHHu5UZA+Nee376nbaMtvLBcQWniMuJEAVmyCfzHHpTNA1+50y4aYkyRFNpWRjjA6Y9R5Vfmwx+nc8XJM9SGDwK84/wDEa/E+rxWan3LVPe/3tyfyxR32e9so7wtDqSojqpZZFHD4GcY7HFYG8aW/urq6kyJXkLsp9f6U7RlLFOD4tbKjEHpTH6U4DnNOVN7AY61ochPaxfwwccnmraAjrT44MLx+dOCEAkjGKybstKhQqgDPHrTlA6+VcBuYAdFGakCjn1qaKGpCMZPDHkkVqPZy28GyMjSLG07ZBZMjA6ZHlms9bo08yRLyzkAVsrG0zbM0JVVHA4+6R1BpNux19FW8OwGJWBWTDErkAY6j05/Sr9k0UNrI10yP4ZPh+GuVGBx35oPNeEXUiISxbICjkkdjU7tHb6fKuHS6I2I2Op4z/wBqhOm2YJbdBUXsLiJFiDCQ8sr85IxnHf4UYhsI4I/+klliDnG3Ix68dqzM8EdlJGykyxSx4ZnAzERjkVoLe+t4rdmBV3hPh5xjcfP6VvjnbqQ7adMLoNqhc9BjgYpTz15+NQ2kxuLdJSu0t2qauhDOrq6uoA6uppkG5QOd3cUu4fnigBa6uJAGT2pqurAFSCCM5oAdXV1dQB1dXV1AHzUzbyTTQM586UdDTo1554FIgchEak965dzNn6Ujnt2qSMEgAEID370ARtwxAOT3NNJwakkATp1FQkE8mgCaOQ7duav6Zc7JSCfvDAoVg05HKsD09aUlaocXTs30UrQgyQrvbwsqB35qnb6vqEcm2UIzk5CAdB50Bj1idZlkUj+GuAueD51odKEE1sJlfxJZeXZuufKsFjrs6Hlt6Cw1O4hQSvsK4OQuTjAqlJILuUy7wWY56VfkhC2Sxjq3J+v/ABVBrcrlsY+FUopEym3piSF414wfhVV3DcMBUrO4Pn6VC+1jypHnimSQ+Ajn72M0k9usUZbcMCpxGEBbB2+dA9WvRP7ke4IOuT1oSsTpFG7ufGlODlV6CoWmYoEGAKaVA6VwXyrWqJScuhM+dENLiE19bjbiPcNxocRg1s9Iij/8vwTAq+QUfHVWBPB+XIrPLJxjaLxRTnTNIkpMfHUChr6jNO8MEMcbO7Hg5AAHUk54xQGb2gudPBgkiWVWGUbdjHoaKextotxYX2qXLMWlk8CNU/CepPoOnxxXOsbq2dTyxul2TXGnwx+LdB3eWSRRmU7sgL/WpE1G7RiX/iE+uSKs3kbTywQoQFOSeOgqnKyh32A7AeMnk1KbCSCEOsxOVWVCp9f7zRKC5VyVhlDY7ZyPzrOwtHIMHbyejVLHaqz+6TH/ALT+1aJsikaYzll8O4iEieTDI+hrLe12l6SII7iKB4rpn2gqx2gdSSp/aq//AJhntJjHGzSKhx7/AEOPrQ671O5vTIly6sCdwzwE+H6UOf0dWL0cpO5rRdk0nTbS6hhOorPvUrJtGDG2Mqcdx04obOEiMio6SKmRkd8d6riF5FaeLJRSNxzypNTW4/iYZcsRgEqCM+oPXjNZyp7PSxRcI0ndaGR3Z8WN5oIp40BURnIX54o7o1pNe63YTXNmttaqMoqe6pKjOcdyeDWe8L31VBw5AHPej2q6Tc6Jb2U6TuJAW3lW4R+Ony4+VWn9GOWCXxvbNrremJq9otu8zxxhgx2jO7HahevaBHfaOtlYKsJgYNGCMAkdQT8+tFNJuje2cU+GCyJuy55/pV0MNu/1xW1Xs8jnOHx+jzeP2bvbDdJcbQBlVAbO7jr8KjvbfwmAkGJHGSpfoD6HpXo9wqTJ4ZAKc7hjg1gvanSmsLR7q0UrGWCtgZ6/iz2HQf8AesZQbkbx9S+fOXgyCsQcdau2CF5N2OFqnHgcmjNonhwKO55NbSOBEwXA9elSAYOMdgcUimnNjKgcE8VmaWd4Y54x8KaytzgZHpUynOaRfd/U0AF/ZLT/ALTdyzSITHCuOR+I/wDFai9DW9pLLEACseCD0I6flWPvjdaVZWdzbXkkDsMlUzySe/Y8Y4NW7b2nvLvSJ5LqCG5g27TNE2xlJOBleh/Kkqey1JR0EoNJdHlmWULIHbcVQZbbwACegx286mt7Zf8AEXVCzoEVtzeucn4kAD4VZsNQs52dEuEWUyE+HIdp5Jx8ehoWb77HqM+VKzElPCdhjIztwfLB/Kiktg3FbRfnED3pjCqBBH4khzjk8dfQZ+tUbrbHcPbpNHEoUEZzls9MeuB0qz43hMrhUdpIdoAO7eSSefzPwoabPwrhp7ks4Zo246LnOM/QVnLrRGRWujSaXYW1rOJGmllZeVOcAfKic+pwwum77hYqx7qcZHHkfOsq96UZ4xGUaVsMOgDAdR6H9qJwKr2lvGzB+SGb0wSefpW0JUqiQlF6iF7K9lupSDEEjAzz1PlVqX3kKKSGYHBFZ22zFes65gUL7jE535HPBPbGat2uqreuAI2G0cP4fB+BrRTXTCvBciZhsinjVXChiRgAH0x9atrGAc8eZ461XWSAOrhNpAxkeVLNK2d8Tbzj3Uzt58yatBTRWuPHv5TGmY4Iz7zHqx7gVNYxW8csoRsyDggnt6VQkuryBYw5JDqd+/Hn1BHSidtFGkUbY3MBkHg9fh1qU02Is11ca4HIyK0A6urq6gD5pU0m49q5jx5ZptIglhUM4zk/CiMduFjZn8qisIMgZ4J5J8hVq4ywVF4Xv60ADWUNIWbgVYMccuwDI7c9qtQW6tGwK5zjIpy6cjf5UjI2OMcgj4UAUZLYpLge5g/i6Uk1lKq7jGR6g5FXxDcQnw5cSRDqfSnPiD3VkC+SniiwoCAsh8u1F9B1AWdxtlJ8GTr6HzqvMqlg20HPDDFVigzhDkEZHmKAR6M8viRoUIZSOMVBI+ByOKA+zuqjC2s7Abvuk+f/ADRt1B5H5HNZtGqdjDtao/B71IY88/nSAMDikMB67dtFKLWMkDaGb+lBQAz5b7oGT61dvj9q1KQk8GUqx9Fplpp0+o3rw2ig45LE4VR6mtEZPsoOBk46V21hgFSCR0IoxH7Mak80CNAyxy8s/XYO+cd/SpTZ3FreGO9USNAMRyNwCO3J6/tTY43egK1pIULAZKkhh5Yx/WiXsxq3+GXjCdPFtJhtnjPcdiPUdRVzS7ArbzT30ghi3sInIysr/wBOOtRQez1/qV0HtrfwoZj7sjkBD6Dz+ApWnopwnH5NMse3VtBbmwe2dZIZY2eN1OQwz1/OtVY28emeyFqkSrG1yFMm4e/LnnI8hWJ1zRbjT7mG2vZQAVxE4/y+vPJ6dfzr0uz0VZ9PtoLm6kmmto1UXSoAJB1GPPHTNTKDcGojhNc7YPYJFbGXbsYJgDyzQZkOByNv0qXUb+aPUrrT5lUtbOSNoPvIBnd6cUrxI6BkbqMr61zcGuzoc03oqM8WACdp/wBQ/erNrFLLIqW7ZdjhRniq1xH+E5xnqKM+ylokS3F+csEUqoUfNvn0FEVbE2B9T05bKzunmtp438cGJmAOQQeCemM88Z6UEkRnZiQEXG4OR19K03tVcRK8RMc0iXLbyzHG3jgAUNnhsbuCSTxltJ7QhcNlllU5xgDkEc/KlXy0elDI5QXLoFK4aZcqoz12jAz8KL6RpU15cRB1kSA5JkXGRxxgd81D7NwPc6pDEjBUY5ckD7o5PX6fOvScY6DHoKqMOW2PP6l4VwgZy20+zsJ08XTsiIl/HkbOwfzHt16Y9aKJdWOqW5R1V43baElXG7jIIHw6VNdvICqKVCsMZZsAny8+nl19KZ/h1t4RRo8kgqzj3WOSCeR0zgVsklpHlyyTk7b2PSWC3hijCmJCQiJtP94FT713BA65I3Yz1HnQ5Lae2gVrRyng7lWNk6rnpx5nn1qKPxbeUSPC53KczcqWbjA29l+PPHSmQGKZLGk0bRyoHRwVZWHBB6ih1lqEYCrPdb2kbALLjLHsD0Hw/wCaKGgDy3W9DbS9Y+zgE27+/Ex7r5fEdKmRQVya2/tHYC905mVczQZdD3x3HzH6VhySRipkTVDkPQmpEw0m4nAAwP3qPGFz2pwyABj51AyYDNS2sXizqpHujlvgOTTUjBXnPPTmrGJbOwkuY4xKMhWycEL5/Wk3SKjG2DNWgu7uVpHnZ2CFEVuifT04qnpqtYxtC8jqJ/dkjIyCR0IP7GiK6pby/fJjY9m6fWht3qFvFeEuSQuAu0Z+Jqfk1xQ5Y49y0X9RvYFs5EMqsZDnw2X3uvUZ4JA9e9Tafq1zDFbvaEzneYWEsW/ge8RnnB560B1HVLa8uxMLZ3wAMs2CcdelSRa1Db2U9rbQT26yuHGybPOMYJxnB4+laxhS0jnWmbMXU1xdgGZoo8EOUAJAPXqeO/Hxq7JdrcK0Fq/26aVUAYrtHBPB9RkcCsdZXVvf2cdvBmN7dCNnAdweuOx/71bv55NMmitrJRNcMOFXqo/7/Cs2ndFxlRpG046fIGuneckgkjIVPj3xVs3kSXLESxhSgZC2cDPY/wBfWsrpHtHf2cz2891DdFs/wFTewb/cOAPmaMtcWjXD7dpuNucxlfDQ/wAuSeceeKHFxHrwWtRu2xGwdo3ZgWUDJUf0PyqaC6VJWijvPCiLBkypOc9h5DNRi7LqVhWGSfGXEZz68sehp/2NXuI7uUGMj39jMPe565+nFQ1LtBxt2mE7q/jtELTuVx0wM5qyJQ0RlVhsGMg8EUIupnluoVVBhs8HnnzBx2pFs5WcyuIlkPcgnp071fN2aO29BhZkdeVOPUU9ZMAKshVB+EcCqMTyg4lUZ/mQ8fQ8ipd2fPNWplqCYUW645X86aLtIslgVTOBQ7d5E1wlfzz8RV+4S8QYjuYpACHAJ7Hg1BPelEzFtkywUEdB6HyNBTJMlwx4VSfdODgenpmuDyqN0qhZGOCw6/Gp91vRm8dHhppyrllHmabUsAzIK6DAKQYWPPODT4T4js54A4HpULPti9elSx5WJQvV8DNIRZtUABOQcmrEWMAY2nsahV1x5eWKeGyAB1oGWcqR069RUU1uHGMAkdjyKcpyM9qkBzj8PFAwVLZoOffjPUMvIoY6m3mIJDKe6mtPtyBk/Cqd3brKrAICSOp4oAFQuq843I3VfL1FaKxun8EZfd5c8/361kwTFIyE42kjmiukXOxgpPuHqD2qWhpmiSVsZcDPp0p7TCONncjCgseagCE8ZxQbWL+aHdbSReGjjG7ruHpUpWW3QMSZISWdN67mJXOOo861Wi+H7NWxGpozSXhDqkeGKoM85z3rKWt6lvewztGJUjcMUYcMPKtQdTvL25n1bSY02+D4ToVDPGDweP3Hb51btLRWCMZTqR3+NS3X2oy3ptoUBaGNYQWkPQLkfmTQ2wntfG2ahkwyfedU3SJ6rk4611tate27W1rYO1zFulllDnIQdiDwAPrUdzcCaK3VLW3t/CXaZIxhpOnLZPX+tYv9ntwilagv/n/f2OS5kUSQWzOYpW24ZBlhnjpz9KdcTQAxJby3KFf8xJWGA/muBx9KfJLbWxs59NnuVvIhvlLBQFf/AE+fekht7jWJL24MsbTRRmeQyvhpAOuPM0qNXKtvr/qDbarKmppbyXH26zDrgyASk5HZgAQe1eh2gAiRQnhjoEwBs9OK8qtJTe+ALSOO1vLZBtli48Qg9T616NY3O3TQ8czXAWJissgwXIzkkYGOa0xvtHker4ckkqa7/wAmWl1G31rXL6KBJYlu4DBKAV3SmMnhW7ZHHyqxY3lpbWzwXCSGMoGMLgb0A43D14x8qHLa3ElxFf8A2NGvZTj+ASAvYsc9DgnNX7O+jl1hFe3D3VuVDMV5Xy5Pc/vWuNwbfI8vI52uN/2A1ze22944ZwyDgE8bhW10OEQ6RbKRyyb2+J5oD7W6Nbzs01vbtDcD/NjCjaRjqP75rVwoI4Y0HRUAHyFZe24vZ1RmpdeCvcada3MU6SRDE67XI647Y8sVDJomnSWiWz2kZjjHu8YI+fWr5YLjcQMnAyep8qWikaKUl0zKXelXehuZ9CgaTETiQuQ7SHHu8ehxwMdeaIQe0lsHeK5SaN0Krnwz/EYkjheo5U/KjdV7l4mIBETzIQyB8cHsfSgltt22QCWy1OMqrxzKp5XPKnHl1B5oHq95a6Pdwxfb7iAsm6PLmRDg4K4/bNWbrQrSWXxHt5oJGfezxPuVuDnPyJ9ahs9LuYJIws8F3aIZJDE8YVnY7jnBzzuxzkcCmS7CMN3qASKTwYrmF8HfGSrYPT3TRIoHZGIOUOR9MVnbTVdRsEhi1SzlcPtAlCgYIUb844wCTjpkA0S03W7bU5UjtlkyY2dtwAKYIGCPifypDTL7wRSHLxqTgrnHIB6/pTmKxoWYhUUZJJ4AqO1ure8QvbTJKo4yhzQTWdL1O4nlhtbhmtLhSzLK2QjD8PmAaTdGkIqTpujQAhlBGGUjPoRXnt9a/Zr6eEdI3Kj9vyr0CJSkMatjcqgHHTOKxXtUpi1uUqdviIjflj9qTIYPRdzKpHqfhU3HcAfCqiTMGzjPbIqxF/EycHipJLCvwFxnyrQww2kiC3li37E2bw20nPX589KCWCqZ1Lj3V8+BnoCa0Wi3SS5zlAnBde/PkaiTXKjWMXx5Iw+r2elxTXEdlcXZaBirLJbkrkHH3h2zxzV3RvZiNYTNeIss7ckHkL6Cn63dxw6VboSPEjuJA4HLPlz4mfTofpRSy1K3NvhH3FF4PTcQOnx9KctdFRuX5bMV7TWNvYXSxwDDMNzLnhaCl2Pw8qO+0OZZ0Z+ZZV3ufj0H0oR9nOM1vj/HZy5K5OiNXaJ1kjOGByCO1ase0FtFZfaUt4GuLjInUnDM3fPmPnWVcbQARSRI0pCL1JAHzpzgpLZH6Dns/rEGnPcMLf8A6iRW8JhjaG7D0FRaHDcza7bJGWDs+6RsdR1bND1spftUMSDc0j7Ux3OcV6Npcf2O1nunghtSpKnby7/Ek55PYVMml0axXgku53sLe5uCEMqqSwbhVHkf9WKG2nt3asoE9sVPkCBnz5obrF7HfWi2xl2LkO+WHLf0rOvZoudlxG3pmssaTWxylJOzeWfttj3buzWSMHh4mwwGeOD/AFq5D7WwOA8tpcRq2eEZZMD1HBH51hPsxjsY1glVizF3dT0x0FNgklBAMkbjPOTgiraGpyR6db65ptwwVLyJXP4JDsb6NiiHUZHIPccivKDeIGKvvUA8EjIPrUlmoWYS29y4A6CNyuPpU0jRZWepZpegz2rFWuvahDhftUc57JcLliPiMGitv7SByFurOVCTjfERIv7EfSlxZfNBvxAq4mYZOePSmJ4hjI2Dw+dqsfeqtNdWst7IttJHLdRuUaMtgqeeee3rVm2gURqSp3jqSep86mnZO2eHngVLbf5gqI1LEwUp555rsOMut1UdjzViI++ueignFVsgSA9qlhbJJ9OKBFpWB5NTKepHXy8qqKeasoeOOaAJ0JPUgd+e9Sjp14quuT0HNTAleORzSGSE9eenNRyjJwAcUuQByeDSEkjkZP50DA+q2uczRgAj7wHf1qtYP73qOR60ccbgcjihUtmYbpWj+4x5H8tAjQ2NwskKndyOKo+013GbVbcMGkLBseQpunrP9gmeFN5jJAXvms/M8ssrNKSXJ97I5zURpst2kRVe0bVZtIvBcQYYEYdCcBhVIg96TjPlWhBfl1KeSaSQMUMhJcKcbsnNXYtVtf8AB5bJrGM3MkgYXJPvKPIf33oIcjtxXAmp4o6Y+pyJ7dhi0iZFW6e0kmtEkAkIBCt/pLdqbqU0EtxJJbQ/ZkblIt+4J86m0zUlSze3n1GW2tZCDLBGpcuRjkDoOnnTPaDWk1WdPBgWGGIbV4G5vU/0qeJ1z9VFLWwd9odJw8bsNpyvPSvT/ZzXF1eGS3kCLKtvkOrdVxt5HYivK3kLsXPU9cVf0jUr2zeSOyceJNG0WCM4DdceXSro8ttuVtm49n7xHs2S3aT7TIMgjkDGOSfrVV7IWguLufxftEkwlCK3Dtn8xRXRdMtdPtECEElEWXbJu3EDHB+tR6+V8FUQBSWwmT7yDqRj1/KtJen4Qcr2v4/ocKzyckl0TQW73GmtfW8rnw3bMS++2O45NFLCWQcXJEco91oy2cVmrHWY9AXfI6BHOCrE7j5HAHXrRr2h9o9MtoLaU/8AV+KNwaBxjaDgnPn6Vhyclo7cSitjfaBL1b2xuIENxFHICsKqc7sHkntRi0klmgV5oGgkPWNmBx8xTY7hfDQormMgYJ6kfCp1YMAR0NSuztlK4pV0RyozrhXKHzFVZIp2IWSOK4Q9SRtIq8ea7HQZHNUZgw+HEWUGa2z0J5Xr2qR19wNKsUwADb+h/v8ArSR6glwMxN4ZU5dJVwSvIB+dBtZvJd6LHJ4TMcgjJ3DpgYqJyUVZpixvJLigot8sTYktpkVucrKT+vFTpbWF8d8G3xRjOz+HJgc446jJofY3xECreM0UrH7zAKGHXvx0+FFbSCzn/iK0UkmPvRkZX6Hg0oy5bQ8mNwe1/gFvoLwWN3a6fc+Et0CGEi52kgDII6dz6k5q7o9tc20Ey3cpd2mZkG/cFTooHyH1qe+Sbwtkk8kYBytzGoJX0de4qtpFld2s13NeSxTG4ZWSSM8MAD0HYCqvdEKKq7CNY72ui36oGHaFR+ZraKgb8WKzvtUkcVqXLlnmkUIDgbQBz8aGQzIeCynjB+FW4OEx375qJY5JOY0dvgpNSR5C+/wemDUE2WVgnbY0T7AM45xu86J6cn2ctJJHkonv7uvHWoLYLINzMAqqVLMOO9XpPDa397cHQgMM5901yP5OzXHl0kDdVgjn0uVoo1XxSu+RRk7NwJz8Ko6zLDpmpp954rhd0wQbtuPuvx8x60ZSIxDdFNhTycjINM2xQo3gRqgbqV7+VbKVKmdDjb0YPULiOa7Jjk8REAVWwRx2zVBpm6Zo77SL74kCAA8ZFB9Oijlul8cgRKMsScCuqElws4pwfOiu7FjzRbQNJvNR8eS1iDrAAW3HH09aG3ngm6k+zZ8HPuZ8q9I/8PrUjR8SllR2Z+OMg47/ACFOT+JEV8gdZaJPp9vJdXUJe7lBSKOMcoO+D2J7nsKBe0t+QY7KE7I4h7yqTjd3/fmvTtVuYba3d9oaYKWXP4QB1NeL3DtLPJI5LMzEknvWcIpyLnaRFSU7FJW5kKHZejEfOu3EnOeabXUATw3MkX3W4PUHkVZBSdC6ErKO2cUPpyMUYEdqloaYVklmtjBn+JN/q5q7Z6s0kqwtG6uxwMHIqPRUtb64SO4D7wQyMrYxjqK0baW6yyyyiOadAQjhdrH0bsfjWDqK32bNuTtdBB5oUtxNMiST3FsZJI26FR7gz3wTVT/E51tMRXLwz+JkYAxjHTB4x6VT9pQ0QvxKjKiWlvCrY4PIJx881k7W7uoyfCmfaPw9R9DTcHL+xLasHkfnXVbv7dLeYRq/iYAJIrtPi8WZj4RcYKqPInp9OTW5kSREkbjz5ipR/MnK+VLtiUFd+0qSBnrXDZ94OAf5lPWmSPUDG5T8alRuQCcVXztO4OpPcedTxsJFyDigC0r471MpycE8nvVIZU8HIqVX5xzigZaB9358V3G0Z4z0pgOF56dhTt+Rjr5ikMXA6BunWq8qk5J7iplJ2k88Hril8It058v6CgAn7K7HFxCcBy28DzGOan1r2dhvgXC7JR0dR+vnVvRtDktY/tEuUnYe6o/AKMRsswKsu1x1X9xXJKuXxO2C+FSPItRsJ7KdknjKns3Y1HYWFxqV2lrax75X6DoAO5J7CvVNR0qG8iaOWMOp7EVBodlZ6HDJEsBDSHLTE5LDsD5AVos2t9mTwb10YbWdJt9MuI7RLjxJljBkJGAWPl6VRh0u6un220LSnvt6CvRr3StHv7v7XNbePPtA2lztby4HWhGovrE0rW2mWItYYzt8UlVXH+mhTfg2lGDjUo/wYi9s5rK5aC4TZIuMjOaiIK9QRmtXqWjLbWk09xcCa9Cb3VfuqPnz/Wh1usUti8jEk7SqgjrV+5oeP0ccjaUtgZFJOOmfSkV2jcMpKsDkEHBFE9MaMToZlLIv3gO6nhvyz86brWjXGmagbabad/vxSA4WVD0YH1rU4Cf/AM0agAmJSrKu0sD18zjpn1otYa1YiMO+9SSd24b257n4DpWTaPYDuZCR5MDTSWYe8xx5UprmqbM/bjdoI6vqjXsrIu5bZT/DjJBx6k9zU2gWPjSG4lXMUZBC/wA7evpVKws3vJQAD4aEb28hWot0hjAWNdg6Dz+tZTdR4xOjFFXbNTp+oS3MQXB3Z4JHai9qrrGxc5JP0oDp2VUMjFkAxgirdzrSabZSzSqXYEBUzgsTWON12dbi5OolbW/a+10y4NvHGZ5lOHwcKvpnzqrYa/d62xNrAiNAuXR8FCTx16jjNYm7T7TI8nRnYt18zWz9jbWaw0pnkfP2ltwTsMcda021o09RiWGO1/cNWNvNcAxPC0seQXkfgMfQHsPKhGuSx2d2baBVZshhtO7a3l8a0Kaj4kAVmX3hgEjBAq8dPt5LiOVkACjAAFRK5R0v5MsM8cJ3NWl/5MjZ6beagTJfSssZ48NvvH1Hl8aK6LpiJqhnhkRFEX+SF5I6E5/s0buLGKMNLGOR5nNDo4kjBBVXXpgnGB51goZIZLfRrP1kpXHpPwlr+Ca6klmuCgZwiHbiP8XnUSW0oTfbMAu37rDBx+1MnvUtJrZFj2q+VYEcr3pLm/CZiIJEi5yrYxnp8TQsCyScpN/4MlmpV9FOG41a4lnLQ+6sZKRRlcsaFSSS6iEivoACrbctzsbzI8vXpRzT43jcteTIgkHDBx73YrQNo7qC+O1+U90MjcAeRPnitXHyLJktW4Lf0OE0wiaVGDRI21doK5x3x1rN6trECFhCfFmY5OD7q/OtRNGRk3EhJPKhTkknufP9KwOuqI9RkjDB8c7wxOc8/KqxxVtM5eLUbIH1G8dy5uZQfRyAPlU9rrupWrForyUbuu47s/Wh9WtMigmvY0upRHETyT0PpXS0kuiErdGs0Z7zU7IzThIhn3GRcb/MkdKmmgnT/MdFHnu/aicc9rHEES4iWNQACHUcUB9oZ9GdC3j75+gEL5J+Jrj429I71UI0UNXnh2NGz78D3j2FdaeyU93ZW0qyqk0/IRxgAdqE2dxBDdxu0QeMHnxBu+eK9D06+S8u7SNWGyMO27PVSMAitXeOkjlk+crAVj7DOkiyXsglQcmOPjd862Gmxta2iRwP4bg8hl4x2GPKrHKKTkHjrTHBWMtI+0EcKKzc292KEZS6AWvamJ9M1GdhtkLGLaBjGDjivPY4Gk6DNa32gczwxRFfDYn3wDx8aDho7cNEgy4HJ8vSt8XVjyvdfQHljKuV/l61EatOpIJPVjnJquy1sYjKSn7TSEc0DG0tdinAUAT6fcG1u4ZuyMCR6d69Rglilj998MuASfxA/dPzrypV44rY6LeMYIGfL4TG3H3x3H5flXNnbVNG2L6NbcxiSYNwQ8K58jg4P6UKvfZrTrsFjahH/miO0/0qza3x+1rHNjwJAdjjjOehI7HjBojO8SzNbxuPGGFbJxtOMk/nUqVq0zSUGtM8x1+23387xsNrO2wM3UDj68VTiuhp+0QSLKWUF/d4Dc8Anr160T9tBHFqbRKP4gzuX+TsPr1rO4rqRzPsvpcCeQsRhycmpwo7gfSh9sp5fHoDVyCRjkN0Hc0yWThFB7fCmlgZMQj3h1PamlzLwvC+dSDbEvHyoESxSBshuCOoqUISRjFUEDSOWU4J+hq1C7E4xyOooAnBIU88VIhbPOenlVWa7hhILvlv5RyTVrR9RsHmzeo6KD7oP3fmRUydKy4q3RfstMuL1gIUJXu54A+darStHgsMO2JZx+MjhfgKbaahbyRr4DJsA4C4xVoTgjg1yyyuR2QxKJdOGFV5rcNyDhh0I6ioTclexNNF8wPMT489tZ8ka0x5llj4eMOPNTg/SkDwznb0f+Vhg1NHMsg6VFc26yjpTsVFeSwAYvEdrUK1W3225ae8ubVRwzxEYOflRMXE1udsgMqef4h/Wkk2ajdwwqviQxjxnJ4wwOFBHxyflTik3oUm0tmV1lEj00W8MYihmbkyMfFmI/ER5fGg9jE32Ix4y8cn5H/tXpFzotnelWnt0dl6MRgj4GmJoGmwAeHbID3PUmtN1R0YM2PG02t/+jy1g1pODj3c0ZjvU17SI9Lu3jiurTJtJ5G2qyd42Pb0NafVtP0SLbHfJFCshwGzt5+NYLVEhs9RnitCslurfwyTuDKenNbQlemefnhFSbh0xk+jXdsSJhAuP/5EZ/Q1PoehXGszyJC8aJDzI7HgD08+lU2vJTF4bFWTGANg4+daf2DmaSW/XhTIsYGBjAzj9K1StnLJ0rG6skOk2f2axyfDG4lhlnY8ZPyoVYavLujSVo2JJLE+6VA/UmiGoytLezujMBvPu/yjoKpyQxycSRKx88c1yPKrdo7VgaSaZprTVEgT+I7QhhuO/gAeZ9Kn13S5dUs7eewkjnHvEhWGCMDp5nisbLaNJGY45pFUke4xypx0zWj9mVv7WWVSbaRZiZSY2IYE/wCnGMD0xihcH5LjkyYpKSRe9mtAga3FxfRZZZcBT0bHn6Z+uK1t5ZxSRgB1iKjrt90AenahsbhLII7pKVAJLDABxzj596ntN09oUKsGJyS3c04SV0LJkllbsFw2Ci+eeVy6JIDHtOFGO/rk1oP8QR7kQRncxAbCnsc4/Q1kNU1K4k1H/C4YmhKyFHmc8HHlU8LTWWptKVE29QjyDjCgZXH9+dD4xejFNtGwb30I3Ngj4YrKaqks5FvFIsa2zZZwAxDeZJPAHWiMeq7NhkJCBeSR73zOeaC+0V/BeA20V3DHHIQXCqSzDuMA9/OlJphKLZRvLw38viW8pkIhLKM+8VHBJHbPFTWjXt0yyTpsKKCsWSSOOCx7fDr8KgsFjsZHaxillYrs3SkKg8/j9KW8uPBG66ujk8+HGMAn9axdN6FHC+5HS24uLoy3LNLtHux/hU0251aKwiw7+8Bwg65oVqWpPFbB4mjRnbaIwcsBjqaF21hdX7b8MQerN0+vetIQtbNZTpV2S3+sXV7u2sY4z1wevxPehLMzcscnpRbVbOGztNpaU3G4DOAEx5fGg4rpglWjmlJsWurq6rJOwPIVwBPSrD6feRw+NJazLF/OUOKgJJHpRdhVHd+taX2Q1aOxuvDl3OjDaM/g5yflWZp8LFZFI6g1MoqSpgexSS4Ug4bcMkDniqd3dQ2tkbi6YBUXgZ5PkPU1nrXX47fSYud0gUqxLYxjIBP5fGs7e6jPq9wqscRJwq54+NcmPG23fRrjnxTZYvdQkuGa5kxtz7o8z/QVRhG1AZDzIdzH0pk7iWYJn3EGBjypZeQcdhXYlRk3bIp5t8hI6dqh6muwTmnLGzdBTA4DIJ8hTQuQSe1SldqHnrTokBAz09KBEKpk07GPrTwdpGMZycU3v6daAHAYBHlW/wDZG3trjQoFnQZBcbvn51gFJI7ederex2khvZ+2dSUZst5g81nNXqjSDadoZLo4hXMT74s5CN1B8wf7zSahC15umIKrI2UcrhSOm1j2I9aLyadPGeVLqDwVP7VFaGVbi4gK7w58RVxjg8MMH1/WsuEeqo6FllfKzxe/vJb68luZjueRiSarjJ6Vxq3p8IdmkY42/dHma6TkJlh2IqEjgc80hdTgZwO/rUkiAsM5AIqNrfb50EjvHCrhBn1rlR5W97p5VyQd+alLiMcYJpgPYiFfXsKrOu/JbOfSpFQudzCnGFjwDgZpAVCgUDCgE9PWr1tDtRQep602OABs5yccGp87RgGgZyboXzC7Rv5qcf8AeiVn7QXNuwFyPFT+ZRyPlQokim7sn0rOWOMuy4ZJQ6Ztrb2gsJG2G4QOOCpODRWDUIJRiN1b5149MrpM4cEMDnnrV6y1q6tMZYSqOgfr9axlgaXxZ0x9Qn+SPWNy5ytShwRWG072st3wsrNC3+rkfWj9vqaSKGVgyn8SnIrB3HtHQmpdMKyKGqrJb4behKsOjKcEVyXauOCDTvHHnStFUxY7+4g4nTxl/mXhh+xpn2sXExWOQjPQEYNO3q3WmPDHJ1AquTJ4or6hp1vc28gvNrJjuenrntWD9oNJTS5oxDKZY5F3A46emRW/ltvGjaF3LxEYKvyCKRdNhZNhRQuMYAwKuOSujOeNSPKmHFa3/wANoPH1eYHlVjyR+X71c1D2JhlJa0naEn8LDcv9RVjRNOHs2juLgvdSnHujHyA710LNFbOV4JPRH7UWQXWJng2iOQ7wM45PX8xQgxOn3lI9RRq7kkugDMw3qMZ2kHHyqusLHhCWJ4G3B/5rGeNN2johmlFJNFKG3aZ/DjJJIz73u/r1rbaFZR2mmqsihEILEnqR3Y+nkKG6fpywASXAWSUdDj7voKi+2XDQvavIGiKiMqRgqA2evfpipSWPbLvmH7k2VpHF9rV2LtlfcLYA7kDpVS8vmmd5Fmn8Jmwqp7uR0B8+ah+0yzbDJL4iopC5XkZx1PfpSSEOhAHHn5UnLWgUUincaaLhnyVRRnHOSeOv51XnsVijCrLLG3dlcjdn0og9wQPebd5Z61TuLhmGeCPPyrOUq6KUfsHppiTscgso7NIcv055/Sklhg0+LG9YmY++55c/CnPKScY6dqdGPEbkA+eRU82+w4JdECXNzdkRWEPhRL1lkPPyFQ61pMxit4rcBpXJMsrE5Y44X9TRyLZGMnCogyewrrVZtQiW4IEIOdhX7xXtz2862g1dmc4uqRlrDRgkm+bEpHQDoKNxxSNIqkbASFB7ZNF/8ODkb2zjkYAGKmWxiXqAfjWjmQsbMH7UjN4IkgbehJdtpz5KD16AfnVGx0a+vmxFAyr/ADuNor00iOMcL9KjFxF5YPqKXvNKkC9Or2zLWnsYvBurlm/0xjA+po7YaJY2ODDboHH4295vqaumde2Kje5UdxWcsjfbNo44x6RZGAMHoayftP7ORbGu7BAjDl4h0b1HkfSjM2rWsP8AmXEa/FhQLWfaeFkMVrmQ92xgU4OV/EnIoV8jJVJEArK7/cDDOOp+FNkdpHZ2HJOTT/dQ5BLEdx0zXacAje+xxkLnIXPSrEZKodowMfWoI32N03E+dTw3AMcse3JbHvDsBUuyl+xirtI88fnU7KSWQ8EgVCNqsCTnAyaRHb+JM3lj4k1RJKrQxhVPvHPPrUkkyW4A2jLr08qoRK27PelkyzlievegBzsWrt5ChfOmnhAM9a5FBYbugpiO53Uoyx+PNNLDOAOK5ThSc8n9KBk1svizovZmAr3/AEa2+yaXawddkYB+NeBWIYXUW04YMMfGvVtP9sLi38OPULXxUI4lh6/Toazc1F7NIq1o2JVTWS1S+Q36PglFbaSOy9D/AFrQWmpafrERFvOrkjlM7XHy60N1TQjL74XxMfiThvmO9E7a+JS/Z4PRDS4TOJTtbbCN7MPwjOKH1p9Gg8D2enkOQ93OiZx+FeTWhiUpVyBkZ9R3rslORyPI9RSzYY5ULt8xxUJ3L+IGgklzvHutx6UgVB0GT5moxke8Mg+YpyyD8ePiKAJd3z9KRQTyc0ismeGFP3he4JoAcDtBNRPKBnJGa4qHOXbJ8s8UmxFPCr9KAG+OpHUU3xRnipCoPUCmLbmSREjBZmYKAO5NAyzrSxtZWjFD4rKMMT+HFBCO1FtdWWC8FtPG0TwIAUYg4zz2OPKhB5pLop9iEVJBcT2zZgleM/6TTK6m1fYk66CkPtFfRY3FH+Iwfyq/B7WOP82Jvkc1nAcU4quM1i8MH4N45Z1pm1tPaS2mIHiFWPGCDReO+BxnK+pGKwOkBFvYnkxsjO458+351pxqEDAgsMNwffBH61jLAl0axzt9h37Sc7QQfhUwuCoyT9Kzlt4CPutbjw2PJTcCp+R/arbPITkEH4A1m4SXRrHJF9ho3Hult6qFGSSaBSXdtcGS4QG4kOULq2VX0qbccq8kayY52AkY9eeDUE0cTgGK3SIZJK7gOfhTjFt7CcklorDeOQWx8avQ39rp8fi3Uu6T8CAbmA+VVTe6eswSYhGBydoJPHYYqpO9m7swMhjLFkidyQua3bor0npvebb6Qlz7WXrlhBHHEhPu5Xc39Kt6C7Tw+HMcTJ1B5OD0NQW1ini+MYtp/CP5f+aP6bE9rcROoVXbK5NYTmp6NZKELUR0I2HY3y8hT13BXBNXXtluyQ38KZe4/vkVDJbvF/mADsSvQ1NUZWDpdwH3Sfh3qncqwAVQTj7x9aJFwGYeRI+FDriTLEnoDwazaRVkARs84Hwq1Cu0d+elV0PpjNO8ZiWS3TxZgOg6D4ntQkJsW7ljLRWkkgRZTmQk4wv/ADRcanZRqFSaIKowBuFZhNC1O8LtdCMFjkEtnHpWfv0a0uZYMgtG5UkeYrpjjT0mc8skluj0eTVII4PGLgRdn/CfnQ2X2qsA2FdnP+lTisCshYgOScdMnpSyEjGK09r9i93XRrp/bCLcVjt5WIOOwqnP7TyupEMABPd2/YVnhzyKUP2PFHtRF7svsvS6zqE2cXATHUKMVSmluJeZbh39CxpjqSQy80wsFGQflWiil0jOUm+2SyNEce4d2OuaiZ9x6UwknmuVsVVGbY7yz51MhUwPwfd5pitnIHOe1cwIGADg9RTERAk/E1ZUrFCQRlm60yOMg521zFQff59BQIUKSgP4nPA9KkLIi7F5qu8pYntSK3JNMC5GVKsxX3QO3c1WYl5OByTU28xwoB1JLdKhGcE0ALjCjzJrs03nFcOFJ70AIOeOtSEe75+dNjB6+VSEhQRikBY0r/1sTdw4NemQRxyQkPGCpOelebaQpMysBkKc5r0u2AFugGQMedcmZ/Iq6RTuNFTxFmtJWilX7pP9atW/tJq2le5qEQuIx0Y8cejf1qbkDjn0FIZ0xslG5SDkHkfSojJropTfk8diQySqg/EcVrdrf+W1aPkwXBLAdgRihUlrBavuQe92yelW9I1VLOV45v8AIm4Y+R869GrhZhfyoHB9vB5H6UpGcFQOevrRTUNJBzPZEMjc7Qc/ShBBRiPut5GpGxR6ZHmKdkE8j60wNzk8EU8gkZxTEL4aMfuj6VwiTjCCkUgnByD608H60DGeCOwpQoDADr8aV2zx0pEGD0pAOUVq/YfTYZbt72c8wjMakef4vlWcsIlubtYSTtwWbHlRy8vW02zuJYcKWiMIx/q4/KueedQyRh9nTjw8oOb8GV1m8N/qV3ddpZWYfDPH5YofT5OgFR10GAtdSUtAHUqjLCkqezge5uI4YhmSRgij1JxQB6J7AaTEukvd3ESu1y/u7lz7q8fmc1pjplietnAf/wDMVLp9olnawW0X3IUCD1wKWW9gjcxgmSUf+3ENzfPHT54p0WVG0XTHzusLY5//AGxUL+z+jopdrGCMD8XKgfnV7F3P2S2T199/6D86VbGJWDvulcfilO4j4dh8qKAENo2my/8Apre4Pk0czqo+ZP6ZrLe0GhXWlyLczX4ktnk92JnJY98dOQB3r0XBrF+3Wn3t1KLo4Szg2Rrzk+8fefHYA4FTJaNcKTmuXRlLu/D7khjSMMcsVHX0+FXdFtZJm8eQe4vK5/Wmyabby3zyW8bR2anCKzEs+O5Pr1rQ2UeyFVx161xZJr8YnpyzSa1pDoFaQ+6CEz989T8KsqqxtlVJwOvn6fGmmTCFV48zSpIYwVDknugPFZJGBejmW4WNycMO47URULJGVYAgjkGsws7W0oV+N3I9aM2d2roMHmqjITWijrFuLRS4J8I9+u2s5NceI48hwM1uZIFuVKsNyngg96891jULW11F49MiGIyVMjEsCe+0dhT9vk9EuVIIWcD3Uu1y0FuOC54ZvQeXxrSWkVtDGI4EVEHYCvPW1q7B5lGfJUFLFrdwG94nB8jitvbpaMuf2emRtHnHGa819rrc22v3XHuyMJF9QR/XNWI9fnhIaNg3oTVHXNR/xS4ScxsjhAjAnI4Pb61UE0yJyTQNxnkfSnbg3B4pBkCuOCOlakChSp90/KkZ170hO0HHSo9wPXrTolyocxOPczg01UJPNSB1C4yQajLD1NMhuxSgz14ppGDXbiacibzgY+tMQgPnUwdlXnkfGnCJY+WPI7YqOWXJO1cCgBJJSTxkfOos5rqUKaAEFPUZOPOmkYpUODmgCdzuIA54wKaTiMKO9LKSGwfKoycYoAlUALnFRSHJwKdI+ECimgYOaAJ1AVSD0PNRtnbjuae7DBAqMkkD4UgCejxl2KAkZx0r0KwnjaCIROki58MlT0PrWK9nYv4E0oIDBlAJ7edag3s3gyRzWhhNs6L4qsCreXr3rhzdsbfxC0p2bD1wwBz6044x72DUF/JkbVwSE8Qn0GKdNK0XMb7eATjyOR+uKybpk2eZXUu5z5VVJxU9yhRzkVWPJr2WZou6dqc1icA74m6oe3wo6EsdXj3I2JO/Zh8RWU6nNPjdkYMpIYdCDgipqyroK3ml3Nrzt8WP+Zaprxx+VELHX5osLcDxV/m6N/zU15Jp1+gdJhA/+pSM/Sppj0CiQ3UZ57UhcDzNW4NO8aEyLdwrgkbXODUUls6H/wBTan4SUAV9xPp8a7J3BRncxwo7n4UrPs4EiMf9AJ/WregQeNqBkf3vCXdz5ngfvUZJcIOT8FwjzkohrTbBbGI5w0r/AHj+wod7Tz4jggH4iXPy4H70bJwcDtWT12fxtSlwfdjwg+XX868r015M3KR6OeseLigY5y1Nrj1rq9c806lpK6gBa03sHZS3GtLNFEsn2ZTJ7zbVBPAJrMjk16n/AOHWnfZtFNyww90+4f7RwP3NA0aBbKSVf+rnZwf/AG4/cT+p+Zq1FEkKBIo1RB+FRgVJXVZQ2uxS11ADH3Y9wKT/AKjisx7TTlsQM/iEHcwHCr5DHc+prQXtysFvJKxwijt1PpWOnDXJdn5Zzk/Hyrk9RkpcUdGGG7KsCb8Y7dPjV0ZUBfTtUcMXhqBT2lAwO/ma4UjrOLFEJLdRxTbKZSr5I5POe9VbqdSGAPyNDnucDaDxTV+BNhDUroM3h8MuO/ao9JlvjeR28AM3idATggeefKq1nbSXcwSNcknz6VvNE0pNOjLEZmcDc37VtixOb/RjPJxKcl3JBY3m5THPFE52nqDtODXlhzxjqRnNegTRvff+IN5ZiVljayAYDoTtGMj51hHiaKYo42smVIPYjg10qHAy5cyqOKUU6RNrelN7VZHQtSRjJPpTAM4rlbY9IadE4959vQAUhiUnpiuQ8cdT3p5GAOano0pNFcAPkdgcUohXypoOx89j1qYeY5BqmQkn2M8FSeRSGBSOBipMgCuzk+VK2PjEgeEL8D0PlTFjw3OQauFQVII4NRhd3unqO9NSJeNDVVU6oTnvmmMpY8DA9eanCleG+tPA8qOQvbRWWEL15NNkA3ccCrTAd6jaNTzQpBKFdFZlFIg94VKVGfKuiXdk+VWjJoY53ynyJrgcyE9hS493dTM4FMka53SGpB14qNafjHFADmOfia5RubApo689qsWieJMoXJye1JugNPpNv4WmiQLvVDmRQcEg9cUT1i6UQiISgvKUOwDkAHGT2zVjS/8AprXCRtMqjOFI3nj6Gsk1+JNSkb8AchR6ZyBXBKLlbROTo11vKZLC4vZmCqBt/wDiOD+v5VVsb59U8MkFYwOv+kd6o3l5GdGjtlZiD7p2jOT3/enpN9ksJGjKtGoydh6nsD3A/WsWrWkZ2A9TjHiMVIIoVjr60Uv4J4WO+VX7ZGKo7MKSe9e3VgnRDg12fMU7b5V3xFFDFUgd+KeQNuAQPOo2TjiuAIJxzTAfkdC1NJHqaUFe4xXFV86YhM+QrQ+zkBjtpJiPvtx8B/yaABK12kQ+HpsCn723J+fNcH+oS44q+2dno1eS/odNMttC8z9EUtWHmcuWdj7zEk/E1pPaqbwoIbdTzIdzfAdPz/SsvIelY+ihUOf2a+qncuP0Nrq6uruOQ6urq6gCSJQzgFtozy3l616zYe1Xs7a2sVvHqMapEgRco44Ax5V5hpsAmkbdwAhOcZ7U1otrFNqnHOehpKW6KppWet/+b9BP/wCUg+jf0p49qtCP/wCVtv8A7H+leTWwhYbLl3SIHJZE3FfQc96Z9nYl/DZXRc+8DjI+HWq5BZ68fafRQM/4lBjz5/pU66raXCqYJg6uu4FQeR9K8x0li0McQcuskm1oOP4mBkZHXAPy69K1A1CO2jCMfEmI97ZyM1nLI1o1hHlthHVLjx3RN3uL7xHrQsz+JdFU/wApV6jzqhfaz9lxJcglXO0Ko+7UtqyAMImVgTuODzzXJO7tnTGukSyvg5zzVOe5AGM5qW6DuTyBVRLG4uXxHGWz/LWFbNLKssviZHb0p1rbeK44OKunSbiNC80YRQQOoOauXFobLTmwB4zjkDqq9z/fnV0yUrY3T9Xj07d4Nqkj4+8zEftRGX2ruML4cNvluepOB6/Osv5damCE/wAQKGx/KKFlmlSZq8MO2hkGsXX/AJtvb2MokzRBCQmQOFHAPwqlreXvWuGyTce852gAP36fWmacN2r3p8uPzorLCs0RSRcq395rSWWUZK+jKGJOLa7tmcZcjBqFkq5cwSWspilHOMg9mHYioCM10JmEkV+Qa4nJ5qVlphWqM6OR9pwanRwRiqxFcrFelDVjUqJnXmmKxjODyKVZQ3WlfBHFA9dofgMMiuwajX3elSBx34NIaZ24ikDKxGeCKdkHyprIp9KQ3ZJuOMYphbb0poJQ+dIZB5U6E5HF6jaVlOcCnFifICmkqD5mqRm2NwSMnvUrjw49p486jXlgD0zTp33sR2HAqjJkRpM547Clpp60AKo97inHrSUvQc/GmI7HajOg2Rk33DKSiDA29c0FU96N6JrMVpG1tdxloGOQy9VPqO4qJptUilVhC6vXtIHmhkkjBRothI3bj+LB5A46VmI3LOx6k1qvaCOG7giMEv8A05O4PHFvGfjnPyoFHYQOpEWpW+/HSVWj/UVnFJImaGreNtRPwRjA9a6S5dJ0mDsHAzwcYqeLTJbeNpriLxIlB2mJt6sccZIPAqldyF3UcYRQgx3x3oUVy0Z8dly7kLDk96rSN7lLIcnFRv5V2WQkJnIzXA8c0nTinqOaaKOSTGAenXpTgy56U14sZNN24pi0TEoaaSvamdfjUscRYjigXRPZWxnkAAJGeTWou7uKxtjLKcKowAOpPkKGwGPTrF7iVSSMcDqfSs9f6hNqE++U4UfdUdFrg9VieaaXhHZ6fJ7UG/LG313Je3LTSn3j0HYDsBVRjlqfUecmt0lFUjJtt2zq6urqYHVwGTXVJBGZJFRerEAUAaLRdP3WXiiWMM+fdYZ46DI71FLo1wFeOPwCpbdxkEfMjpRy0t/CiVfDxtXAI8sVYIKjG8qPUZ/Wsbpto27STMi2mXsPBgYg9djBs1HbQTJdRK6yRBmCs23HBOD1rXGXYTuWM/Ff6U0Sgc+ACPQmq5MnijMre/ZrtZIl/hhdoTyGexNGrXU0uhjCoR0Z2GfhjtV4pZOcy22QegwGrNe0lrElzCbWMKjjAQLhi3fj6UtSGm4DkVtW1RpEBaCD3U9T/fP0o1FYzIg9w8dWA+tULLQrU28RkuWSbGW2tgA+VWoNBmtyXs9QIGO3I+YzSaTLjJrwHon3jKqyY/mGKvrPFHAGeRUBHGTjisoY9XjfKzwyFfNcfpXXLak7KZreOQhce6+MfKp4mnuI0PirfSxeHxEDkE+nc0I1S+gvLoqwIUHCuP76VHaXl0ltPALeSMsOCeRg9apNGQ3vJgeXlXPkdOjpxLkrRL4KlyFPbz6VyFogSHxzyv8ANUaMYyvOfLHUVISDg4xz1HesDoBekZa91CYL7u/GQOBkmjisCmMZoJoErq16VPuySe8PPr/WjcIDngPg9eM1rl/PRz4fw2dc2cF9CFkTlfxDhloBf6XPZZf/ADIR+MdviK1aoIZAG2n/AGvnj5VR16QG2WJBw7bj54HStsVt0Z5qUXIye4GkNOlhdWOBnFREletdPFo41kTFxSYpTuChivBGc0m9T3oplWhClJtI70/IrsigKQzmuyaecUmBQKjgTTt5FJxSZUUhil8imkilOD2qNjg4poli4B7V2PewMCmbsVwbJ9P1p0Q2SkhVyDyTx8KZ5+dIW3Nk0maYkKaaeuK4mk7Z86AYoJNK3XA6UgNdTEOHSuJwamjgZlUhS2RnAqGRSrEYI+IpAWLHUJ7FyYWyrffjblW+I/eiSCw1Nht/gSk8ox/Q9xQIH605c5HY54NS42NM0mpO2mQOILc27Oy7HRuQB6+ZOfrQCWRpXZ3wWY5OBirEmoTS25ikYseBuz1HlVSlCNITrwf/2Q==",
@@ -206,39 +261,68 @@ const SectionEyebrow = ({ children }) => (
 --------------------------------------------------------------- */
 export default function App() {
   const [tab, setTab] = useState('beranda');
+  const [pricing, setPricing] = useState(DEFAULT_PRICES);
+
+  const reloadPricing = useCallback(async () => {
+    try {
+      const { data } = await api.pricing.get();
+      if (data) {
+        setPricing((prev) => ({ ...prev, ...data }));
+      }
+    } catch (e) {
+      console.warn('Gagal memuat pricing:', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    reloadPricing();
+  }, [reloadPricing]);
+
+  const catalog = useMemo(() => getCatalog(pricing), [pricing]);
+
+  const contextValue = useMemo(() => ({
+    pricing,
+    packages: catalog.packages,
+    addons: catalog.addons,
+    dpPercent: catalog.dpPercent,
+    terms: catalog.terms,
+    reloadPricing,
+  }), [pricing, catalog, reloadPricing]);
 
   return (
-    <div
-      className="min-h-screen w-full"
-      style={{
-        background: 'linear-gradient(180deg,#FFF3F7 0%, #FFF9F6 40%, #FFFDFB 100%)',
-        fontFamily: "'Quicksand', sans-serif",
-        color: '#5b2233',
-      }}
-    >
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Quicksand:wght@400;500;600;700&family=DM+Mono:wght@500&display=swap');
-        .font-script { font-family: 'Caveat', cursive; }
-        .torn-top { clip-path: polygon(0% 6px,3% 0,6% 6px,9% 1px,12% 7px,15% 0,18% 6px,21% 2px,24% 7px,27% 0,30% 6px,33% 1px,36% 7px,39% 0,42% 6px,45% 2px,48% 7px,51% 0,54% 6px,57% 1px,60% 7px,63% 0,66% 6px,69% 2px,72% 7px,75% 0,78% 6px,81% 1px,84% 7px,87% 0,90% 6px,93% 2px,96% 7px,100% 0,100% 100%,0% 100%); }
-        ::selection { background: #ffb6c9; color: #5b2233; }
-        @keyframes ctaGlow { 0%,100% { box-shadow: 0 8px 22px rgba(255,45,110,0.35); } 50% { box-shadow: 0 10px 30px rgba(255,45,110,0.55); } }
-        .cta-glow { animation: ctaGlow 2.4s ease-in-out infinite; }
-        @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
-      `}</style>
+    <PricingContext.Provider value={contextValue}>
+      <div
+        className="min-h-screen w-full"
+        style={{
+          background: 'linear-gradient(180deg,#FFF3F7 0%, #FFF9F6 40%, #FFFDFB 100%)',
+          fontFamily: "'Quicksand', sans-serif",
+          color: '#5b2233',
+        }}
+      >
+        <style>{`
+          @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Quicksand:wght@400;500;600;700&family=DM+Mono:wght@500&display=swap');
+          .font-script { font-family: 'Caveat', cursive; }
+          .torn-top { clip-path: polygon(0% 6px,3% 0,6% 6px,9% 1px,12% 7px,15% 0,18% 6px,21% 2px,24% 7px,27% 0,30% 6px,33% 1px,36% 7px,39% 0,42% 6px,45% 2px,48% 7px,51% 0,54% 6px,57% 1px,60% 7px,63% 0,66% 6px,69% 2px,72% 7px,75% 0,78% 6px,81% 1px,84% 7px,87% 0,90% 6px,93% 2px,96% 7px,100% 0,100% 100%,0% 100%); }
+          ::selection { background: #ffb6c9; color: #5b2233; }
+          @keyframes ctaGlow { 0%,100% { box-shadow: 0 8px 22px rgba(255,45,110,0.35); } 50% { box-shadow: 0 10px 30px rgba(255,45,110,0.55); } }
+          .cta-glow { animation: ctaGlow 2.4s ease-in-out infinite; }
+          @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+        `}</style>
 
-      <Nav tab={tab} setTab={setTab} />
+        <Nav tab={tab} setTab={setTab} />
 
-      <main className="max-w-6xl mx-auto px-4 sm:px-6">
-        {tab === 'beranda' && <Beranda goTo={setTab} />}
-        {tab === 'galeri' && <Galeri />}
-        {tab === 'paket' && <Paket goTo={setTab} />}
-        {tab === 'booking' && <Booking />}
-        {tab === 'jadwal' && <JadwalAdmin />}
-      </main>
+        <main className="max-w-6xl mx-auto px-4 sm:px-6">
+          {tab === 'beranda' && <Beranda goTo={setTab} />}
+          {tab === 'galeri' && <Galeri />}
+          {tab === 'paket' && <Paket goTo={setTab} />}
+          {tab === 'booking' && <Booking />}
+          {tab === 'jadwal' && <JadwalAdmin />}
+        </main>
 
-      <Footer />
-      <FloatingContact />
-    </div>
+        <Footer />
+        <FloatingContact />
+      </div>
+    </PricingContext.Provider>
   );
 }
 
@@ -404,8 +488,9 @@ function Galeri() {
    PAKET & HARGA
 --------------------------------------------------------------- */
 function Paket({ goTo }) {
+  const { packages, addons, dpPercent, terms } = usePricing();
   const [cat, setCat] = useState('regular');
-  const current = PACKAGES[cat];
+  const current = packages[cat] || packages.regular;
 
   return (
     <section className="py-14">
@@ -413,7 +498,7 @@ function Paket({ goTo }) {
       <h2 className="font-script text-5xl text-[#a32e52] mb-6">Paket &amp; Harga</h2>
 
       <div className="flex flex-wrap gap-2 mb-8">
-        {Object.entries(PACKAGES).map(([key, val]) => {
+        {Object.entries(packages).map(([key, val]) => {
           const Icon = val.icon;
           return (
             <button
@@ -466,7 +551,7 @@ function Paket({ goTo }) {
       <div className="mt-10 bg-white rounded-2xl border border-pink-100 p-6">
         <h3 className="font-script text-3xl text-[#a32e52] mb-3">Add-On</h3>
         <ul className="text-sm text-[#5b2233] space-y-1.5">
-          {ADDONS.map((a) => (
+          {addons.map((a) => (
             <li key={a.id}>• {a.label}: <b>{IDR(a.price)}</b>{a.note ? ` (${a.note})` : ''}</li>
           ))}
           <li>• Tambah edit tone/foto: <b>Rp5.000</b> /foto</li>
@@ -485,7 +570,7 @@ function Paket({ goTo }) {
             </div>
           ))}
         </div>
-        <p className="text-sm text-[#5b2233] mt-3">DP minimal <b>{DP_MIN_PERCENT}%</b> dari total harga, atau bisa langsung pelunasan penuh saat booking.</p>
+        <p className="text-sm text-[#5b2233] mt-3">DP minimal <b>{dpPercent}%</b> dari total harga, atau bisa langsung pelunasan penuh saat booking.</p>
         <p className="text-xs text-[#a3748a] mt-1 italic">{PAYMENT_NOTE}</p>
       </div>
 
@@ -493,7 +578,7 @@ function Paket({ goTo }) {
       <div className="mt-6 bg-pink-50 rounded-2xl border border-pink-100 p-6">
         <h3 className="font-script text-3xl text-[#a32e52] mb-3">Terms &amp; Condition</h3>
         <ul className="text-sm text-[#5b2233] space-y-1.5 list-disc list-inside">
-          {TERMS.map((t, i) => <li key={i}>{t}</li>)}
+          {terms.map((t, i) => <li key={i}>{t}</li>)}
         </ul>
       </div>
 
@@ -514,7 +599,7 @@ function Paket({ goTo }) {
    Data booking disimpan di tabel `bookings` MySQL, dan bukti
    pembayaran diunggah ke server hosting di `/uploads/payment-proofs/`.
 --------------------------------------------------------------- */
-import { api } from './lib/api.js';
+
 
 // Kalender publik: hanya ambil tanggal + jam + nama paket (tanpa data pribadi)
 async function loadSharedSlots() {
@@ -540,6 +625,7 @@ async function loadBookings() {
    BOOKING (calendar + form + auto total + pembayaran)
 --------------------------------------------------------------- */
 function Booking() {
+  const { packages, addons, dpPercent, pricing } = usePricing();
   const today = new Date();
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
@@ -549,7 +635,7 @@ function Booking() {
   const [loadingSlots, setLoadingSlots] = useState(true);
 
   const [category, setCategory] = useState('regular');
-  const [packageId, setPackageId] = useState(PACKAGES.regular.items[0].id);
+  const [packageId, setPackageId] = useState(() => packages.regular.items[0].id);
   const [addonDuration, setAddonDuration] = useState(false);
   const [addonLocation, setAddonLocation] = useState(false);
   const [extraPeople, setExtraPeople] = useState(0);
@@ -612,30 +698,30 @@ function Booking() {
 
   const pkg = useMemo(() => {
     if (category === 'polaroid') return null;
-    return PACKAGES[category].items.find((p) => p.id === packageId);
-  }, [category, packageId]);
+    return packages[category]?.items.find((p) => p.id === packageId);
+  }, [category, packageId, packages]);
 
   const hasPerPerson = pkg && pkg.perPerson;
 
   const total = useMemo(() => {
     let t = 0;
     if (category === 'polaroid') {
-      const p = PACKAGES.polaroid.items.find((p) => p.id === packageId);
-      if (p) t += p.price;
+      const p = packages.polaroid.items.find((p) => p.id === packageId);
+      if (p) t += (p.price || 0);
     } else if (pkg) {
-      t += pkg.price;
-      if (addonDuration) t += 40000;
-      if (addonLocation) t += 40000;
-      if (hasPerPerson) t += (Number(extraPeople) || 0) * pkg.perPerson;
+      t += (pkg.price || 0);
+      if (addonDuration) t += (Number(pricing.addon_duration30) || 40000);
+      if (addonLocation) t += (Number(pricing.addon_location) || 40000);
+      if (hasPerPerson) t += (Number(extraPeople) || 0) * (Number(pricing.group_per_person) || 100000);
     }
     if (polaroidAddon) {
-      const pa = PACKAGES.polaroid.items.find((p) => p.id === polaroidAddon);
-      if (pa) t += pa.price;
+      const pa = packages.polaroid.items.find((p) => p.id === polaroidAddon);
+      if (pa) t += (pa.price || 0);
     }
     return t;
-  }, [category, packageId, pkg, addonDuration, addonLocation, extraPeople, hasPerPerson, polaroidAddon]);
+  }, [category, packageId, pkg, addonDuration, addonLocation, extraPeople, hasPerPerson, polaroidAddon, packages, pricing]);
 
-  const dpAmount = Math.ceil((total * DP_MIN_PERCENT) / 100 / 1000) * 1000;
+  const dpAmount = Math.ceil((total * dpPercent) / 100 / 1000) * 1000;
   const amountToPay = paymentType === 'lunas' ? total : dpAmount;
   const sisaBayar = total - amountToPay;
 
@@ -683,7 +769,7 @@ function Booking() {
       }
 
       const packageLabel = category === 'polaroid'
-        ? PACKAGES.polaroid.items.find((p) => p.id === packageId)?.name
+        ? packages.polaroid.items.find((p) => p.id === packageId)?.name
         : pkg?.name;
 
       const addonsText = [];
@@ -693,7 +779,7 @@ function Booking() {
         if (hasPerPerson && Number(extraPeople) > 0) addonsText.push(`${extraPeople} orang tambahan`);
       }
       if (polaroidAddon) {
-        const pa = PACKAGES.polaroid.items.find((p) => p.id === polaroidAddon);
+        const pa = packages.polaroid.items.find((p) => p.id === polaroidAddon);
         if (pa) addonsText.push(`Add-on: ${pa.name}`);
       }
 
@@ -748,7 +834,7 @@ function Booking() {
   };
 
   if (success) {
-    const waMsg = `Halo meimories.cam! Saya ${success.name} baru saja booking ${success.packageName} pada ${formatDateID(success.date)} jam ${success.time}. Total: ${IDR(success.total)}. Saya pilih ${success.paymentType === 'lunas' ? 'pelunasan penuh' : `DP ${DP_MIN_PERCENT}%`} sebesar ${IDR(success.amountToPay)}.`;
+    const waMsg = `Halo meimories.cam! Saya ${success.name} baru saja booking ${success.packageName} pada ${formatDateID(success.date)} jam ${success.time}. Total: ${IDR(success.total)}. Saya pilih ${success.paymentType === 'lunas' ? 'pelunasan penuh' : `DP ${dpPercent}%`} sebesar ${IDR(success.amountToPay)}.`;
     return (
       <section className="py-16 max-w-lg mx-auto text-center">
         <div className="bg-white rounded-2xl border border-pink-100 p-8 shadow-md">
@@ -764,7 +850,7 @@ function Booking() {
             <p><b>Lokasi:</b> {success.lokasi}</p>
             {success.addons.length > 0 && <p><b>Add-on:</b> {success.addons.join(', ')}</p>}
             <p><b>Total:</b> {IDR(success.total)}</p>
-            <p><b>{success.paymentType === 'lunas' ? 'Pelunasan penuh' : `DP (${DP_MIN_PERCENT}%)`}:</b> {IDR(success.amountToPay)}</p>
+            <p><b>{success.paymentType === 'lunas' ? 'Pelunasan penuh' : `DP (${dpPercent}%)`}:</b> {IDR(success.amountToPay)}</p>
             {success.sisaBayar > 0 && <p><b>Sisa dilunasi (H-1):</b> {IDR(success.sisaBayar)}</p>}
             <p><b>Bukti pembayaran:</b> {success.paymentProof ? 'sudah terupload ✓' : 'belum diupload'}</p>
           </div>
@@ -874,7 +960,7 @@ function Booking() {
           <div>
             <label className="text-sm font-semibold text-[#5b2233] block mb-2">Kategori Paket</label>
             <div className="flex flex-wrap gap-2">
-              {Object.entries(PACKAGES).map(([key, val]) => (
+              {Object.entries(packages).map(([key, val]) => (
                 <button
                   type="button"
                   key={key}
@@ -896,7 +982,7 @@ function Booking() {
               onChange={(e) => setPackageId(e.target.value)}
               className="w-full rounded-lg border border-pink-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#a32e52]"
             >
-              {PACKAGES[category].items.map((p) => (
+              {packages[category].items.map((p) => (
                 <option key={p.id} value={p.id}>{p.name} — {IDR(p.price)}</option>
               ))}
             </select>
@@ -908,15 +994,15 @@ function Booking() {
               <div className="space-y-2 text-sm text-[#5b2233]">
                 <label className="flex items-center gap-2">
                   <input type="checkbox" checked={addonDuration} onChange={(e) => setAddonDuration(e.target.checked)} className="accent-[#a32e52]" />
-                  Tambah durasi 30 menit (+{IDR(40000)})
+                  Tambah durasi 30 menit (+{IDR(pricing.addon_duration30 || 40000)})
                 </label>
                 <label className="flex items-center gap-2">
                   <input type="checkbox" checked={addonLocation} onChange={(e) => setAddonLocation(e.target.checked)} className="accent-[#a32e52]" />
-                  Tambah 1 lokasi berbeda (+{IDR(40000)})
+                  Tambah 1 lokasi berbeda (+{IDR(pricing.addon_location || 40000)})
                 </label>
                 {hasPerPerson && (
                   <div className="flex items-center gap-2">
-                    <span>Orang tambahan (+{IDR(pkg.perPerson)}/orang):</span>
+                    <span>Orang tambahan (+{IDR(pricing.group_per_person || pkg.perPerson)}/orang):</span>
                     <input
                       type="number" min="0"
                       value={extraPeople}
@@ -938,7 +1024,7 @@ function Booking() {
                 className="w-full rounded-lg border border-pink-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#a32e52]"
               >
                 <option value="">Tidak, terima kasih</option>
-                {PACKAGES.polaroid.items.map((p) => (
+                {packages.polaroid.items.map((p) => (
                   <option key={p.id} value={p.id}>{p.name} — {IDR(p.price)}</option>
                 ))}
               </select>
@@ -988,7 +1074,7 @@ function Booking() {
               <label className={`flex flex-col gap-0.5 rounded-lg border px-3 py-2.5 cursor-pointer ${paymentType === 'dp' ? 'border-[#a32e52] bg-pink-50' : 'border-pink-200'}`}>
                 <span className="flex items-center gap-2 text-sm font-semibold text-[#5b2233]">
                   <input type="radio" name="paymentType" checked={paymentType === 'dp'} onChange={() => setPaymentType('dp')} className="accent-[#a32e52]" />
-                  DP minimal {DP_MIN_PERCENT}%
+                  DP minimal {dpPercent}%
                 </span>
                 <span className="text-xs text-[#a3748a] pl-6">Bayar sekarang: {IDR(dpAmount)}</span>
               </label>
@@ -1032,7 +1118,7 @@ function Booking() {
               ))}
             </div>
             <p className="text-[11px] text-[#a3748a] mt-2">
-              Transfer sejumlah <b>{IDR(amountToPay)}</b> ({paymentType === 'lunas' ? 'pelunasan penuh' : `DP ${DP_MIN_PERCENT}%`}), lalu unggah bukti transfer di bawah ini.
+              Transfer sejumlah <b>{IDR(amountToPay)}</b> ({paymentType === 'lunas' ? 'pelunasan penuh' : `DP ${dpPercent}%`}), lalu unggah bukti transfer di bawah ini.
             </p>
           </div>
 
@@ -1093,6 +1179,7 @@ function formatDateID(key) {
    JADWAL & PENGINGAT (admin-only view)
 --------------------------------------------------------------- */
 function JadwalAdmin() {
+  const { pricing, reloadPricing, dpPercent } = usePricing();
   const [session, setSession] = useState(undefined); // undefined = belum dicek, null = belum login
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -1100,6 +1187,7 @@ function JadwalAdmin() {
   const [authLoading, setAuthLoading] = useState(false);
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [subTab, setSubTab] = useState('jadwal'); // 'jadwal' | 'harga'
 
   // Cek sesi login yang tersimpan (auto-login lagi kalau sebelumnya sudah pernah login)
   useEffect(() => {
@@ -1164,7 +1252,7 @@ function JadwalAdmin() {
         <div className="bg-white rounded-2xl border border-pink-100 p-8 shadow-sm">
           <Lock className="mx-auto text-[#a32e52] mb-3" size={28} />
           <h2 className="font-script text-3xl text-[#a32e52] mb-1">Khusus Admin</h2>
-          <p className="text-sm text-[#7a3c50] mb-4">Login untuk melihat detail booking &amp; pengingat jadwal.</p>
+          <p className="text-sm text-[#7a3c50] mb-4">Login untuk melihat detail booking, pengingat jadwal, &amp; kelola harga.</p>
           <form onSubmit={handleLogin} className="space-y-3 text-left">
             <div>
               <label className="text-xs font-semibold text-[#5b2233] block mb-1">Email</label>
@@ -1198,7 +1286,7 @@ function JadwalAdmin() {
             </button>
           </form>
           <p className="text-[11px] text-[#a3748a] mt-4">
-            Login ini menggunakan akun admin meimories.cam. Data booking lengkap hanya bisa dibaca setelah login berhasil.
+            Login ini menggunakan akun admin meimories.cam. Akses jadwal dan pengaturan harga hanya terbuka untuk admin terverifikasi.
           </p>
         </div>
       </section>
@@ -1217,76 +1305,490 @@ function JadwalAdmin() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <SectionEyebrow>khusus admin</SectionEyebrow>
-          <h2 className="font-script text-5xl text-[#a32e52]">Jadwal &amp; Pengingat</h2>
+          <h2 className="font-script text-5xl text-[#a32e52]">Panel Admin</h2>
           <p className="text-xs text-[#a3748a] mt-1">Login sebagai {session.user.email}</p>
         </div>
         <div className="flex items-center gap-3">
-          <button onClick={fetchBookings} className="text-sm text-[#a32e52] underline">Muat ulang</button>
+          {subTab === 'jadwal' && (
+            <button onClick={fetchBookings} className="text-sm text-[#a32e52] underline">Muat ulang</button>
+          )}
           <button onClick={handleLogout} className="text-sm text-[#a32e52] underline flex items-center gap-1"><Lock size={13} /> Logout</button>
         </div>
       </div>
 
-      {loading ? (
-        <p className="text-sm text-[#a3748a] flex items-center gap-2"><Loader2 className="animate-spin" size={14} /> Memuat data...</p>
-      ) : upcoming.length === 0 ? (
-        <p className="text-sm text-[#7a3c50] bg-white rounded-2xl border border-pink-100 p-6">Belum ada sesi mendatang. Booking baru akan muncul di sini.</p>
-      ) : (
-        <div className="space-y-3">
-          {upcoming.map((b) => {
-            const [y, m, d] = b.date.split('-').map(Number);
-            const diffDays = Math.round((new Date(y, m - 1, d) - new Date(today.getFullYear(), today.getMonth(), today.getDate())) / 86400000);
-            let badge = `H-${diffDays}`;
-            let badgeColor = 'bg-pink-100 text-[#a32e52]';
-            if (diffDays === 0) { badge = 'Hari ini!'; badgeColor = 'bg-[#a32e52] text-white'; }
-            else if (diffDays === 1) { badge = 'Besok'; badgeColor = 'bg-[#e8b34d] text-white'; }
-            else if (diffDays <= 3) { badgeColor = 'bg-rose-200 text-[#a32e52]'; }
+      {/* Sub-tab Navigation */}
+      <div className="flex border-b border-pink-200 mb-6 gap-2">
+        <button
+          type="button"
+          onClick={() => setSubTab('jadwal')}
+          className={`pb-3 px-3 text-sm font-semibold flex items-center gap-2 border-b-2 transition-all ${
+            subTab === 'jadwal'
+              ? 'border-[#a32e52] text-[#a32e52]'
+              : 'border-transparent text-gray-400 hover:text-[#a32e52]'
+          }`}
+        >
+          <CalendarDays size={17} />
+          <span>Jadwal &amp; Pengingat</span>
+          <span className="bg-pink-100 text-[#a32e52] text-[11px] px-2 py-0.5 rounded-full font-bold">
+            {upcoming.length}
+          </span>
+        </button>
 
-            return (
-              <div key={b.id} className="bg-white rounded-2xl border border-pink-100 p-5 flex flex-wrap items-center gap-4 shadow-sm">
-                <span className={`px-3 py-1 rounded-full text-xs font-bold shrink-0 ${badgeColor}`}>{badge}</span>
-                <div className="flex-1 min-w-[180px]">
-                  <p className="font-semibold text-[#5b2233]">{b.packageName}</p>
-                  <p className="text-xs text-[#a3748a]">{formatDateID(b.date)} · {b.time}</p>
+        <button
+          type="button"
+          onClick={() => setSubTab('harga')}
+          className={`pb-3 px-3 text-sm font-semibold flex items-center gap-2 border-b-2 transition-all ${
+            subTab === 'harga'
+              ? 'border-[#a32e52] text-[#a32e52]'
+              : 'border-transparent text-gray-400 hover:text-[#a32e52]'
+          }`}
+        >
+          <Tag size={17} />
+          <span>Kelola Harga Paket</span>
+        </button>
+      </div>
+
+      {subTab === 'harga' ? (
+        <KelolaHarga currentPricing={pricing} onSuccess={reloadPricing} />
+      ) : (
+        loading ? (
+          <p className="text-sm text-[#a3748a] flex items-center gap-2"><Loader2 className="animate-spin" size={14} /> Memuat data...</p>
+        ) : upcoming.length === 0 ? (
+          <p className="text-sm text-[#7a3c50] bg-white rounded-2xl border border-pink-100 p-6">Belum ada sesi mendatang. Booking baru akan muncul di sini.</p>
+        ) : (
+          <div className="space-y-3">
+            {upcoming.map((b) => {
+              const [y, m, d] = b.date.split('-').map(Number);
+              const diffDays = Math.round((new Date(y, m - 1, d) - new Date(today.getFullYear(), today.getMonth(), today.getDate())) / 86400000);
+              let badge = `H-${diffDays}`;
+              let badgeColor = 'bg-pink-100 text-[#a32e52]';
+              if (diffDays === 0) { badge = 'Hari ini!'; badgeColor = 'bg-[#a32e52] text-white'; }
+              else if (diffDays === 1) { badge = 'Besok'; badgeColor = 'bg-[#e8b34d] text-white'; }
+              else if (diffDays <= 3) { badgeColor = 'bg-rose-200 text-[#a32e52]'; }
+
+              return (
+                <div key={b.id} className="bg-white rounded-2xl border border-pink-100 p-5 flex flex-wrap items-center gap-4 shadow-sm">
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold shrink-0 ${badgeColor}`}>{badge}</span>
+                  <div className="flex-1 min-w-[180px]">
+                    <p className="font-semibold text-[#5b2233]">{b.packageName}</p>
+                    <p className="text-xs text-[#a3748a]">{formatDateID(b.date)} · {b.time}</p>
+                  </div>
+                  <div className="text-sm text-[#5b2233]">
+                    <p><b>{b.name}</b></p>
+                    <p className="text-xs text-[#a3748a]">{b.wa}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleCancelBooking(b.id, b.name, b.date, b.time)}
+                    className="p-2 text-rose-500 hover:bg-rose-50 rounded-full transition-colors ml-auto sm:ml-0"
+                    title="Batalkan Booking"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                  {b.lokasi && <p className="text-xs text-[#7a3c50] w-full sm:w-auto flex items-center gap-1"><MapPin size={12} /> {b.lokasi}</p>}
+                  {b.addons && b.addons.length > 0 && (
+                    <p className="text-xs text-[#7a3c50] w-full sm:w-auto">Add-on: {b.addons.join(', ')}</p>
+                  )}
+                  {b.notes && <p className="text-xs italic text-[#a3748a] w-full">"{b.notes}"</p>}
+                  <div className="w-full flex flex-wrap items-center justify-between gap-2 border-t border-pink-50 pt-2 mt-1">
+                    <span className="text-xs text-[#a3748a]">
+                      {b.paymentType === 'lunas' ? 'Lunas' : `DP ${dpPercent}%`}: <b className="text-[#5b2233]">{IDR(b.amountToPay ?? b.total)}</b>
+                      {b.sisaBayar > 0 && <> · Sisa: <b className="text-[#5b2233]">{IDR(b.sisaBayar)}</b></>}
+                    </span>
+                    <span className="font-bold text-[#a32e52]" style={{ fontFamily: "'DM Mono', monospace" }}>Total {IDR(b.total)}</span>
+                  </div>
+                  {b.paymentProof ? (
+                    <a href={b.paymentProof} target="_blank" rel="noopener noreferrer" className="w-full">
+                      <img src={b.paymentProof} alt={`Bukti bayar ${b.name}`} className="mt-2 max-h-32 rounded-lg border border-pink-100 object-contain" />
+                    </a>
+                  ) : (
+                    <p className="w-full text-xs text-[#a3748a] flex items-center gap-1"><ImageOff size={12} /> Bukti pembayaran belum diupload</p>
+                  )}
                 </div>
-                <div className="text-sm text-[#5b2233]">
-                  <p><b>{b.name}</b></p>
-                  <p className="text-xs text-[#a3748a]">{b.wa}</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleCancelBooking(b.id, b.name, b.date, b.time)}
-                  className="p-2 text-rose-500 hover:bg-rose-50 rounded-full transition-colors ml-auto sm:ml-0"
-                  title="Batalkan Booking"
-                >
-                  <Trash2 size={18} />
-                </button>
-                {b.lokasi && <p className="text-xs text-[#7a3c50] w-full sm:w-auto flex items-center gap-1"><MapPin size={12} /> {b.lokasi}</p>}
-                {b.addons && b.addons.length > 0 && (
-                  <p className="text-xs text-[#7a3c50] w-full sm:w-auto">Add-on: {b.addons.join(', ')}</p>
-                )}
-                {b.notes && <p className="text-xs italic text-[#a3748a] w-full">"{b.notes}"</p>}
-                <div className="w-full flex flex-wrap items-center justify-between gap-2 border-t border-pink-50 pt-2 mt-1">
-                  <span className="text-xs text-[#a3748a]">
-                    {b.paymentType === 'lunas' ? 'Lunas' : `DP ${DP_MIN_PERCENT}%`}: <b className="text-[#5b2233]">{IDR(b.amountToPay ?? b.total)}</b>
-                    {b.sisaBayar > 0 && <> · Sisa: <b className="text-[#5b2233]">{IDR(b.sisaBayar)}</b></>}
-                  </span>
-                  <span className="font-bold text-[#a32e52]" style={{ fontFamily: "'DM Mono', monospace" }}>Total {IDR(b.total)}</span>
-                </div>
-                {b.paymentProof ? (
-                  <a href={b.paymentProof} target="_blank" rel="noopener noreferrer" className="w-full">
-                    <img src={b.paymentProof} alt={`Bukti bayar ${b.name}`} className="mt-2 max-h-32 rounded-lg border border-pink-100 object-contain" />
-                  </a>
-                ) : (
-                  <p className="w-full text-xs text-[#a3748a] flex items-center gap-1"><ImageOff size={12} /> Bukti pembayaran belum diupload</p>
-                )}
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )
       )}
     </section>
   );
 }
+
+/* ---------------------------------------------------------------
+   KELOLA HARGA (admin-only view)
+--------------------------------------------------------------- */
+function KelolaHarga({ currentPricing, onSuccess }) {
+  const [form, setForm] = useState(() => ({ ...currentPricing }));
+  const [saving, setSaving] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [toast, setToast] = useState(null);
+
+  useEffect(() => {
+    setForm({ ...currentPricing });
+  }, [currentPricing]);
+
+  const handleChange = (key, value) => {
+    const rawVal = String(value).replace(/\D/g, '');
+    const num = rawVal === '' ? 0 : parseInt(rawVal, 10);
+    setForm((prev) => ({ ...prev, [key]: num }));
+  };
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    setToast(null);
+    try {
+      const res = await api.pricing.update(form);
+      setToast({ type: 'success', message: res.message || 'Perubahan harga berhasil disimpan!' });
+      if (onSuccess) await onSuccess();
+      setTimeout(() => setToast(null), 4000);
+    } catch (err) {
+      setToast({ type: 'error', message: err.message || 'Gagal menyimpan harga.' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleReset = async () => {
+    const confirmReset = window.confirm(
+      'Apakah Anda yakin ingin mengembalikan seluruh harga paket, add-on, dan persentase DP ke nilai default bawaan?'
+    );
+    if (!confirmReset) return;
+
+    setResetting(true);
+    setToast(null);
+    try {
+      const res = await api.pricing.reset();
+      if (res.data) setForm(res.data);
+      setToast({ type: 'success', message: res.message || 'Harga berhasil dikembalikan ke default!' });
+      if (onSuccess) await onSuccess();
+      setTimeout(() => setToast(null), 4000);
+    } catch (err) {
+      setToast({ type: 'error', message: err.message || 'Gagal mereset harga.' });
+    } finally {
+      setResetting(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {toast && (
+        <div
+          className={`p-4 rounded-xl flex items-center justify-between text-sm transition-all shadow-sm ${
+            toast.type === 'success'
+              ? 'bg-emerald-50 border border-emerald-200 text-emerald-800'
+              : 'bg-rose-50 border border-rose-200 text-rose-800'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            {toast.type === 'success' ? (
+              <CheckCircle2 size={18} className="text-emerald-600 shrink-0" />
+            ) : (
+              <AlertCircle size={18} className="text-rose-600 shrink-0" />
+            )}
+            <span className="font-semibold">{toast.message}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setToast(null)}
+            className="text-xs font-semibold underline hover:opacity-75"
+          >
+            Tutup
+          </button>
+        </div>
+      )}
+
+      <form onSubmit={handleSave} className="space-y-6">
+        {/* Banner Top */}
+        <div className="bg-white rounded-2xl border border-pink-100 p-5 shadow-sm flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h3 className="text-lg font-bold text-[#5b2233]">Pengaturan Harga &amp; Kebijakan DP</h3>
+            <p className="text-xs text-[#a3748a] mt-0.5">
+              Perubahan harga akan langsung berlaku pada katalog paket dan kalkulator booking klien.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleReset}
+              disabled={resetting || saving}
+              className="px-4 py-2 text-xs font-semibold rounded-xl border border-pink-200 text-[#a32e52] hover:bg-pink-50 transition-colors flex items-center gap-1.5 disabled:opacity-50"
+            >
+              {resetting ? <Loader2 size={14} className="animate-spin" /> : <RotateCcw size={14} />}
+              Reset ke Default
+            </button>
+            <button
+              type="submit"
+              disabled={saving || resetting}
+              className="px-5 py-2 text-xs font-bold rounded-xl bg-[#a32e52] text-white hover:bg-[#892342] transition-colors flex items-center gap-1.5 shadow-sm disabled:opacity-50"
+            >
+              {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+              Simpan Perubahan
+            </button>
+          </div>
+        </div>
+
+        {/* 1. REGULAR PACK */}
+        <div className="bg-white rounded-2xl border border-pink-100 p-6 shadow-sm">
+          <div className="flex items-center gap-2 mb-4 pb-3 border-b border-pink-50">
+            <Camera className="text-[#a32e52]" size={20} />
+            <h4 className="font-bold text-[#5b2233]">Regular Pack</h4>
+            <span className="text-xs text-[#a3748a] ml-auto">Sempro, semhas, sidang &amp; momen harian</span>
+          </div>
+          <div className="grid sm:grid-cols-3 gap-4">
+            <PriceInput
+              label="Mini Meimories"
+              sublabel="30 menit · 20 foto edit"
+              value={form.mini}
+              onChange={(val) => handleChange('mini', val)}
+            />
+            <PriceInput
+              label="Sweet Meimories"
+              sublabel="45 menit · 30 foto edit"
+              badge="Favorit"
+              value={form.sweet}
+              onChange={(val) => handleChange('sweet', val)}
+            />
+            <PriceInput
+              label="Signature Meimories"
+              sublabel="60 menit · 40 foto edit"
+              value={form.signature}
+              onChange={(val) => handleChange('signature', val)}
+            />
+          </div>
+        </div>
+
+        {/* 2. GRADUATION PACK */}
+        <div className="bg-white rounded-2xl border border-pink-100 p-6 shadow-sm">
+          <div className="flex items-center gap-2 mb-4 pb-3 border-b border-pink-50">
+            <GraduationCap className="text-[#a32e52]" size={20} />
+            <h4 className="font-bold text-[#5b2233]">Graduation Pack</h4>
+            <span className="text-xs text-[#a3748a] ml-auto">Yudisium &amp; Wisuda</span>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <PriceInput
+              label="The Moment"
+              sublabel="30 menit · 30 foto edit"
+              value={form.moment}
+              onChange={(val) => handleChange('moment', val)}
+            />
+            <PriceInput
+              label="The Journey"
+              sublabel="1 jam · 35 foto edit"
+              value={form.journey}
+              onChange={(val) => handleChange('journey', val)}
+            />
+            <PriceInput
+              label="The Milestone"
+              sublabel="1.5 jam · 40 foto edit"
+              value={form.milestone}
+              onChange={(val) => handleChange('milestone', val)}
+            />
+            <PriceInput
+              label="The Achievement"
+              sublabel="35m pagi + 1 jam · 45 foto"
+              value={form.achievement}
+              onChange={(val) => handleChange('achievement', val)}
+            />
+            <PriceInput
+              label="The Graduate Story"
+              sublabel="1 jam pagi + 1 jam · 50 foto"
+              badge="Favorit"
+              value={form.graduatestory}
+              onChange={(val) => handleChange('graduatestory', val)}
+            />
+          </div>
+        </div>
+
+        {/* 3. GROUP PACK */}
+        <div className="bg-white rounded-2xl border border-pink-100 p-6 shadow-sm">
+          <div className="flex items-center gap-2 mb-4 pb-3 border-b border-pink-50">
+            <Users className="text-[#a32e52]" size={20} />
+            <h4 className="font-bold text-[#5b2233]">Group Pack</h4>
+            <span className="text-xs text-[#a3748a] ml-auto">Foto bersama teman &amp; kelompok</span>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <PriceInput
+              label="Bestie Meimories"
+              sublabel="2–3 orang · 40 menit"
+              value={form.bestie}
+              onChange={(val) => handleChange('bestie', val)}
+            />
+            <PriceInput
+              label="Circle Meimories"
+              sublabel="3–5 orang · 1 jam"
+              value={form.circle}
+              onChange={(val) => handleChange('circle', val)}
+            />
+            <PriceInput
+              label="Together Meimories"
+              sublabel="6–8 orang · 1 jam"
+              value={form.together}
+              onChange={(val) => handleChange('together', val)}
+            />
+            <PriceInput
+              label="Forever Meimories"
+              sublabel="10–15 orang · 1.5 jam"
+              value={form.forever}
+              onChange={(val) => handleChange('forever', val)}
+            />
+            <PriceInput
+              label="Biaya Tambah Orang"
+              sublabel="Tarif per orang tambahan"
+              badge="Per Orang"
+              value={form.group_per_person}
+              onChange={(val) => handleChange('group_per_person', val)}
+            />
+          </div>
+        </div>
+
+        {/* 4. POLAROID */}
+        <div className="bg-white rounded-2xl border border-pink-100 p-6 shadow-sm">
+          <div className="flex items-center gap-2 mb-4 pb-3 border-b border-pink-50">
+            <Sparkles className="text-[#a32e52]" size={20} />
+            <h4 className="font-bold text-[#5b2233]">Foto Polaroid (Instax Mini 8)</h4>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <PriceInput
+              label="1 Polaroid"
+              sublabel="1 lembar foto instan"
+              value={form.p1}
+              onChange={(val) => handleChange('p1', val)}
+            />
+            <PriceInput
+              label="Paket Mini"
+              sublabel="5 lembar foto instan"
+              value={form.pmini}
+              onChange={(val) => handleChange('pmini', val)}
+            />
+            <PriceInput
+              label="Paket Sweet"
+              sublabel="10 lembar foto instan"
+              value={form.psweet}
+              onChange={(val) => handleChange('psweet', val)}
+            />
+            <PriceInput
+              label="Paket Memories"
+              sublabel="15 lembar foto instan"
+              value={form.pmemories}
+              onChange={(val) => handleChange('pmemories', val)}
+            />
+            <PriceInput
+              label="Paket Unlimited Fun"
+              sublabel="20 lembar foto instan"
+              value={form.punlimited}
+              onChange={(val) => handleChange('punlimited', val)}
+            />
+          </div>
+        </div>
+
+        {/* 5. ADDONS & KEBIJAKAN DP */}
+        <div className="bg-white rounded-2xl border border-pink-100 p-6 shadow-sm">
+          <div className="flex items-center gap-2 mb-4 pb-3 border-b border-pink-50">
+            <CircleDollarSign className="text-[#a32e52]" size={20} />
+            <h4 className="font-bold text-[#5b2233]">Add-On &amp; Kebijakan DP</h4>
+            <span className="text-xs text-[#a3748a] ml-auto">Biaya sesi ekstra &amp; minimal uang muka</span>
+          </div>
+          <div className="grid sm:grid-cols-3 gap-4">
+            <PriceInput
+              label="Tambah Durasi 30 Menit"
+              sublabel="Add-on sesi foto ekstra"
+              value={form.addon_duration30}
+              onChange={(val) => handleChange('addon_duration30', val)}
+            />
+            <PriceInput
+              label="Tambah 1 Lokasi Berbeda"
+              sublabel="Add-on lokasi tambahan"
+              value={form.addon_location}
+              onChange={(val) => handleChange('addon_location', val)}
+            />
+            <div className="bg-pink-50/40 border border-pink-100 rounded-xl p-3.5 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-[#5b2233]">Minimal Down Payment (DP)</label>
+                  <span className="text-[10px] bg-rose-100 text-[#a32e52] font-semibold px-2 py-0.5 rounded-full">Kebijakan</span>
+                </div>
+                <p className="text-[11px] text-[#a3748a] mt-0.5">Persentase minimal pembayaran saat booking</p>
+              </div>
+              <div className="mt-3">
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={form.dp_min_percent ?? 50}
+                    onChange={(e) => {
+                      const val = Math.min(100, Math.max(0, parseInt(e.target.value, 10) || 0));
+                      setForm((prev) => ({ ...prev, dp_min_percent: val }));
+                    }}
+                    className="w-full bg-white rounded-lg border border-pink-200 px-3 py-1.5 pr-8 text-sm font-semibold text-[#5b2233] focus:outline-none focus:ring-2 focus:ring-[#a32e52]"
+                  />
+                  <span className="absolute right-3 top-2 text-xs font-bold text-[#a3748a]">%</span>
+                </div>
+                <div className="mt-1.5 flex items-center justify-between text-[11px] text-[#a3748a]">
+                  <span>Preview minimal DP:</span>
+                  <span className="font-bold text-[#a32e52]">{form.dp_min_percent || 50}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom actions */}
+        <div className="flex justify-end gap-3 pt-2">
+          <button
+            type="button"
+            onClick={handleReset}
+            disabled={resetting || saving}
+            className="px-4 py-2.5 text-xs font-semibold rounded-xl border border-pink-200 text-[#a32e52] hover:bg-pink-50 transition-colors flex items-center gap-1.5 disabled:opacity-50"
+          >
+            {resetting ? <Loader2 size={14} className="animate-spin" /> : <RotateCcw size={14} />}
+            Reset ke Default
+          </button>
+          <button
+            type="submit"
+            disabled={saving || resetting}
+            className="px-6 py-2.5 text-sm font-bold rounded-xl bg-[#a32e52] text-white hover:bg-[#892342] transition-colors flex items-center gap-2 shadow-md disabled:opacity-50"
+          >
+            {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+            Simpan Perubahan Harga
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+function PriceInput({ label, sublabel, badge, value, onChange }) {
+  return (
+    <div className="bg-pink-50/40 border border-pink-100 rounded-xl p-3.5 flex flex-col justify-between">
+      <div>
+        <div className="flex items-center justify-between gap-1">
+          <label className="text-xs font-bold text-[#5b2233]">{label}</label>
+          {badge && (
+            <span className="text-[10px] bg-amber-100 text-amber-800 font-semibold px-2 py-0.5 rounded-full shrink-0">
+              {badge}
+            </span>
+          )}
+        </div>
+        {sublabel && <p className="text-[11px] text-[#a3748a] mt-0.5 truncate">{sublabel}</p>}
+      </div>
+      <div className="mt-3">
+        <div className="relative">
+          <span className="absolute left-2.5 top-2 text-xs font-semibold text-[#a3748a]">Rp</span>
+          <input
+            type="text"
+            inputMode="numeric"
+            value={value !== undefined ? (Number(value) || 0).toLocaleString('id-ID') : '0'}
+            onChange={(e) => onChange(e.target.value)}
+            className="w-full bg-white rounded-lg border border-pink-200 pl-8 pr-3 py-1.5 text-sm font-semibold text-[#5b2233] focus:outline-none focus:ring-2 focus:ring-[#a32e52]"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 
 /* ---------------------------------------------------------------
    FLOATING CONTACT — tombol mengambang "ada pertanyaan?" (WA & Instagram)
