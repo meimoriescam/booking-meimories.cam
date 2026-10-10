@@ -17,14 +17,6 @@ Website booking untuk meimories.cam, dibangun menggunakan **React + Vite + Tailw
 
 ---
 
-## 🛠️ Informasi Server & Database
-- **Host / Live URL**: `https://meimoriescam.zedevio.com`
-- **FTP Host**: `16.78.67.164:2614` (User: `meimoriescam`)
-- **phpMyAdmin**: `https://databases.zedevio.com:8088`
-- **Database Server**: `10.10.16.6:3037` (Database: `if061026_meimories_sql`, User: `meimoriessql`)
-
----
-
 ## 🔑 Membuat atau Mereset Akun Admin Baru
 
 Sesuai standar keamanan (OWASP Top 10), akun admin **tidak disimpan secara hardcoded**. Anda dapat membuat akun admin baru dengan 2 cara:
